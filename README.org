@@ -1,0 +1,247 @@
+* function programming experimental lib
+
+** source
+Stream is created from a source, source is a slice, a channel, or even a reader.
+
+e.g. create stream from slice
+
+#+begin_src go
+StreamOf([]int{1, 2, 3})
+StreamOf([]string{"a", "b", "c"})
+#+end_src
+
+e.g. create stream from channel
+
+#+begin_src go
+ch := make(chan string, 1)
+StreamOf(ch)
+#+end_src
+
+e.g. create stream from custom source
+
+#+begin_src go
+type Source interface {
+	// source element type
+	ElemType() reflect.Type
+	// first element fo source
+	CAR() reflect.Value
+	// the rest source data excepet car
+	CDR() Source
+}
+
+StreamOfSource(mySource)
+// create a file source, read text line by line
+file, _ := os.Open("example.txt")
+defer file.Close()
+source := NewLineSource(file)
+StreamOfSource(source)
+#+end_src
+
+
+** high order functions
+
+*** Map
+
+#+begin_src go
+slice := []string{"a", "b", "c"}
+var out []string
+StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
+suite.ElementsMatch(out, []string{"A", "B", "C"})
+#+end_src
+
+*** Filter
+
+#+begin_src go
+slice := []string{"a", "b", "c"}
+out := StreamOf(slice).Filter(func(s string) bool {
+	return s == "b"
+}).Result().Strings()
+suite.Equal([]string{"b"}, out)
+#+end_src
+
+*** Reject
+
+#+begin_src go
+slice := []string{"a", "b", "c"}
+out := StreamOf(slice).Reject(func(s string) bool {
+	return s == "b"
+}).Result().Strings()
+suite.Equal([]string{"a", "c"}, out)
+#+end_src
+
+*** Foreach
+
+#+begin_src go
+var out string
+slice := []string{"abc", "de", "f"}
+out1 := StreamOf(slice).Foreach(func(s string) {
+	out += s
+}).Result().Strings()
+suite.Equal("abcdef", out)
+suite.ElementsMatch(slice, out1)
+#+end_src
+
+*** Flatten
+
+#+begin_src go
+slice := []string{"abc", "de", "f"}
+out := StreamOf(slice).Map(func(s string) []byte {
+	return []byte(s)
+}).Flatten().Result().Bytes()
+suite.Equal("abcdef", string(out))
+#+end_src
+
+deep flatten
+
+#+begin_src go
+slice := [][]string{
+	{"abc", "de", "f"},
+	{"g", "hi"},
+}
+out := StreamOf(slice).Map(func(s []string) [][]byte {
+	return StreamOf(s).Map(func(st string) []byte {
+		return []byte(st)
+	}).Result().Interface().([][]byte)
+}).Flatten().Flatten().Result().Bytes()
+suite.Equal("abcdefghi", string(out))
+#+end_src
+
+*** Batch
+
+#+begin_src go
+source := []string{"a", "b", "c", "d"}
+
+out := StreamOf(source).Batch(3).Result().StringsList()
+suite.Equal([][]string{
+	{"a", "b", "c"},
+	{"d"},
+}, out)
+#+end_src
+
+*** Reduce
+
+#+begin_src go
+source := []string{"a", "b", "c", "d", "a", "c"}
+
+out := StreamOf(source).Reduce(map[string]int{}, func(memo map[string]int, s string) map[string]int {
+	memo[s] += 1
+	return memo
+}).Interface().(map[string]int)
+suite.Equal(map[string]int{
+	"a": 2,
+	"b": 1,
+	"c": 2,
+	"d": 1,
+}, out)
+#+end_src
+
+*** First
+
+#+begin_src go
+slice := []string{"abc", "de", "f"}
+q := StreamOf(slice)
+out := q.First()
+suite.Equal("abc", out.String())
+#+end_src
+
+*** IsEmpty
+
+#+begin_src go
+slice := []string{"abc", "de", "f"}
+q := StreamOf(slice)
+suite.False(q.IsEmpty())
+out := q.First()
+suite.Equal("abc", out.String())
+#+end_src
+
+*** Take
+
+#+begin_src go
+slice := []string{"abc", "de", "f"}
+out := strings.Join(StreamOf(slice).Take(2).Result().Strings(), "")
+suite.Equal("abcde", out)
+#+end_src
+
+*** Skip
+
+#+begin_src go
+slice := []string{"abc", "de", "f"}
+out := strings.Join(StreamOf(slice).Skip(2).Result().Strings(), "")
+suite.Equal("f", out)
+#+end_src
+
+*** Sort/SortBy
+
+#+begin_src go
+slice := []int{1, 3, 2}
+out := StreamOf(slice).Sort().Result().Ints()
+suite.Equal([]int{1, 2, 3}, out)
+
+slice := []string{"abc", "de", "f"}
+out := StreamOf(slice).SortBy(func(a, b string) bool {
+	return len(a) < len(b)
+}).Result().Strings()
+suite.Equal([]string{"f", "de", "abc"}, out)
+#+end_src
+
+*** Uniq/UniqBy
+
+#+begin_src go
+slice := []int{1, 3, 2, 1, 2, 1, 3}
+out := StreamOf(slice).Uniq().Result().Ints()
+suite.ElementsMatch([]int{1, 2, 3}, out)
+
+slice := []int{1, 3, 2, 1, 2, 1, 3}
+out := StreamOf(slice).UniqBy(func(i int) bool {
+	return i%2 == 0
+}).Result().Ints()
+suite.ElementsMatch([]int{1, 2}, out)
+#+end_src
+
+*** Size
+
+#+begin_src go
+out := StreamOf(slice).Size()
+suite.Equal(2, out)
+#+end_src
+
+*** Contains
+
+#+begin_src go
+slice := []string{"abc", "de", "f"}
+q := StreamOf(slice)
+suite.True(q.Contains("de"))
+#+end_src
+
+** Result
+
+stream transform would not work unless Run/ToSlice/Result is invoked.
+
+*** Run
+
+use Run if you just want stream flows but do not care about the result
+
+#+begin_src go
+// the numbers would not print without Run
+StreamOf(source).Foreach(func(i int) {
+	fmt.Println(i)
+}).Run()
+#+end_src
+
+*** ToSlice
+
+#+begin_src go
+slice := []string{"a", "b", "c"}
+var out []string
+StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
+suite.ElementsMatch(out, []string{"A", "B", "C"})
+#+end_src
+
+*** Result
+
+#+begin_src go
+slice := []string{"a", "b", "c"}
+q := StreamOf(slice).Map(strings.ToUpper)
+out := q.Result().Strings()
+suite.ElementsMatch(out, []string{"A", "B", "C"})
+#+end_src
