@@ -13,6 +13,9 @@ func StreamOf(arr interface{}) Stream {
 }
 
 func StreamOfSource(s Source) Stream {
+	if s == nil {
+		return &nilStream{}
+	}
 	return newStream(s.ElemType(), makeListBySource(s.ElemType(), s))
 }
 

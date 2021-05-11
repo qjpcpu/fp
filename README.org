@@ -1,6 +1,25 @@
 * function programming experimental lib
 
+** why another fp lib
+
+I like fp style and I haven't found a lib with these features:
+
+- streamingly, I can handle infinite data source such as go channel or a socket reader
+- lazy evaluation, well, huge list processing wouldn't make me oom
+- generic, the interface{} type ocurrs in a map function sucks
+- chain calls, functions should be compositional
+- clean, I hope the core of the lib would be clean
+- performance, good performance would be a bonus
+
+
+And when I decide to build a new fp lib, the theory of lisp come to my mind immediately.
+
+If I can bring cons,car,cdr into golang, that would be cool and attractive for me.
+
+So I spend couple of days make this, and I hope you like it. Any feedback is welcome.
+
 ** source
+
 Stream is created from a source, source is a slice, a channel, or even a reader.
 
 e.g. create stream from slice
@@ -25,7 +44,7 @@ type Source interface {
 	ElemType() reflect.Type
 	// first element fo source
 	CAR() reflect.Value
-	// the rest source data excepet car
+	// the rest source data except car
 	CDR() Source
 }
 

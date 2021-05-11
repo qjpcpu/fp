@@ -334,6 +334,26 @@ func (suite *TestFPTestSuite) TestDeepFlatten() {
 	suite.Equal([]string{"abc", "f", "g"}, out1)
 }
 
+func (suite *TestFPTestSuite) TestDeepFlatten2() {
+	slice := [][]string{
+		{"abc", "de", "f"},
+		{"g", "hi"},
+	}
+	out := StreamOf(slice).Map(func(s []string) Stream {
+		return StreamOf(s).Map(func(st string) []byte {
+			return []byte(st)
+		})
+	}).Flatten().Flatten().Result().Bytes()
+	suite.Equal("abcdefghi", string(out))
+	var slice1 [][]string
+	out = StreamOf(slice1).Map(func(s []string) Stream {
+		return StreamOf(s).Map(func(st string) []byte {
+			return []byte(st)
+		})
+	}).Flatten().Flatten().Result().Bytes()
+	suite.Equal("", string(out))
+}
+
 func (suite *TestFPTestSuite) TestHybridFlatten() {
 	slice := []chan string{
 		make(chan string, 3),
@@ -485,4 +505,23 @@ func (suite *TestFPTestSuite) TestAppend() {
 	slice := []string{"abc", "de"}
 	out := StreamOf(slice).Append("A").Result().Strings()
 	suite.Equal([]string{"abc", "de", "A"}, out)
+}
+
+func (suite *TestFPTestSuite) TestNilStream() {
+	var slice []string
+	out := StreamOf(slice).Append("a").Result().Strings()
+	suite.Equal([]string{"a"}, out)
+
+	var slice1 []Stream
+	out = StreamOf(slice1).Flatten().Append("a").Result().Strings()
+	suite.Equal([]string{"a"}, out)
+}
+
+func (suite *TestFPTestSuite) TestJoinNilStream() {
+	slice := []string{"a"}
+	out := new(nilStream).Join(StreamOf(slice)).Result().Strings()
+	suite.Equal([]string{"a"}, out)
+
+	out = StreamOf(slice).Join(&nilStream{}).Result().Strings()
+	suite.Equal([]string{"a"}, out)
 }

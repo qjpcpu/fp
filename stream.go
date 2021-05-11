@@ -61,6 +61,8 @@ type Stream interface {
 	Result() Value
 }
 
+var streamType = reflect.TypeOf((*Stream)(nil)).Elem()
+
 type stream struct {
 	expectElemTyp reflect.Type
 	list          *list
@@ -70,10 +72,6 @@ type stream struct {
 
 func newStream(expTyp reflect.Type, list *list) *stream {
 	return &stream{expectElemTyp: expTyp, list: list}
-}
-
-func (q *stream) getlist() *list {
-	return q.list
 }
 
 func (q *stream) Map(fn interface{}) Stream {
@@ -87,6 +85,19 @@ func (q *stream) Filter(fn interface{}) Stream {
 }
 
 func (q *stream) Flatten() Stream {
+	if q.expectElemTyp == streamType {
+		/* sadly, i can't know the detail element type cause of our lazy evaluation */
+		/* i have to car for the first element to get elem type */
+		/* well, it's not lazy enough here */
+		if l := flatten(q.list); l == nil {
+		} else if e := car(l); e != nil {
+			return newStream(e.typ, l)
+		}
+		return &nilStream{}
+	}
+	if kind := q.expectElemTyp.Kind(); kind != reflect.Chan && kind != reflect.Slice && kind != reflect.Array {
+		panic(q.expectElemTyp.String() + " can not be flatten")
+	}
 	return newStream(q.expectElemTyp.Elem(), flatten(q.list))
 }
 
@@ -189,6 +200,8 @@ func (q *stream) Join(other Stream) Stream {
 			panic("different stream type")
 		}
 		sourcelist = s.list
+	} else if _, ok := other.(*nilStream); ok {
+		return q
 	} else {
 		source := other.ToSource()
 		if source.ElemType() != q.expectElemTyp {
@@ -429,6 +442,9 @@ func valueOfCell(e *atom) Value {
 }
 
 func (rv Value) Result(dst interface{}) {
+	if !rv.val.IsValid() {
+		return
+	}
 	val := reflect.ValueOf(dst)
 	if val.Kind() != reflect.Ptr {
 		panic(`fp: dst must be pointer`)
@@ -437,6 +453,9 @@ func (rv Value) Result(dst interface{}) {
 }
 
 func (rv Value) Interface() interface{} {
+	if !rv.val.IsValid() {
+		return nil
+	}
 	return rv.val.Interface()
 }
 
