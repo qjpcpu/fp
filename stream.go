@@ -16,13 +16,13 @@ type Stream interface {
 	Reject(fn interface{}) Stream
 	// Foreach stream element, fn should be func(element_type)
 	Foreach(fn interface{}) Stream
-	// Flatten stream, element shoulbe flatten-able
+	// Flatten stream, element should be flatten-able
 	Flatten() Stream
 	// Reduce stream, fn should be func(initval_type, element_type) initval_type
 	Reduce(initval interface{}, fn interface{}) Value
 	// Partition stream, split stream into small batch
 	Partition(size int) Stream
-	// Fisrt value of stream
+	// First value of stream
 	First() Value
 	// IsEmpty stream
 	IsEmpty() bool
@@ -101,8 +101,8 @@ func (q *stream) Prepend(v interface{}) Stream {
 	}
 	old := q.list
 	l := cons(
-		func() *cell {
-			return createCell(typ, val)
+		func() *atom {
+			return createAtom(typ, val)
 		},
 		func() *list {
 			return old
@@ -170,7 +170,7 @@ func (q *stream) Uniq() Stream {
 		val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
 	}
 	dup := make(map[interface{}]struct{})
-	processList(q.list, func(e *cell) bool {
+	processList(q.list, func(e *atom) bool {
 		key := e.val.Interface()
 		if _, ok := dup[key]; !ok {
 			v.val = reflect.Append(v.val, e.val)
@@ -206,7 +206,7 @@ func (q *stream) UniqBy(fn interface{}) Stream {
 	}
 	getKey := reflect.ValueOf(fn)
 	dup := make(map[interface{}]struct{})
-	processList(q.list, func(e *cell) bool {
+	processList(q.list, func(e *atom) bool {
 		key := getKey.Call([]reflect.Value{e.val})[0].Interface()
 		if _, ok := dup[key]; !ok {
 			v.val = reflect.Append(v.val, e.val)
@@ -255,7 +255,7 @@ func (q *stream) Reduce(initval interface{}, fn interface{}) Value {
 	typ := reflect.TypeOf(initval)
 	memo := reflect.ValueOf(initval)
 	fnval := reflect.ValueOf(fn)
-	processList(q.list, func(cell *cell) bool {
+	processList(q.list, func(cell *atom) bool {
 		memo = fnval.Call([]reflect.Value{memo, cell.val})[0]
 		return true
 	})
@@ -283,7 +283,7 @@ func (q *stream) GroupBy(fn interface{}) KVStream {
 	table := reflect.MakeMap(reflect.MapOf(keyTyp, valTyp))
 
 	fnVal := reflect.ValueOf(fn)
-	processList(q.list, func(cell *cell) bool {
+	processList(q.list, func(cell *atom) bool {
 		key := fnVal.Call([]reflect.Value{cell.val})[0]
 		slice := table.MapIndex(key)
 		if !slice.IsValid() {
@@ -329,7 +329,7 @@ func (q *stream) Contains(e interface{}) (yes bool) {
 	default:
 		eq = func(v reflect.Value) bool { return reflect.DeepEqual(v.Interface(), e) }
 	}
-	processList(q.list, func(cell *cell) bool {
+	processList(q.list, func(cell *atom) bool {
 		yes = eq(cell.val)
 		return !yes
 	})
@@ -415,13 +415,13 @@ func (q *stream) compare(a, b reflect.Value) int {
 	return 0
 }
 
-/* vlaue related */
+/* value related */
 type Value struct {
 	typ reflect.Type
 	val reflect.Value
 }
 
-func valueOfCell(e *cell) Value {
+func valueOfCell(e *atom) Value {
 	return Value{
 		typ: e.typ,
 		val: e.val,

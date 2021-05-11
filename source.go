@@ -17,8 +17,11 @@ func StreamOfSource(s Source) Stream {
 }
 
 type Source interface {
+	// ElemType element type
 	ElemType() reflect.Type
+	// CAR Contents of the Address part of Register number
 	CAR() reflect.Value
+	// CDR Contents of the Decrement part of the Register
 	CDR() Source
 }
 
@@ -45,9 +48,9 @@ func makeListWithElemType(typ reflect.Type, val reflect.Value) (reflect.Type, *l
 func makeListBySource(elemTyp reflect.Type, source Source) *list {
 	if source != nil {
 		el := emptyList()
-		el.elem = carOnce(func() *cell {
+		el.elem = carOnce(func() *atom {
 			if c := source.CAR(); c.IsValid() {
-				return createCell(elemTyp, c)
+				return createAtom(elemTyp, c)
 			}
 			return nil
 		})

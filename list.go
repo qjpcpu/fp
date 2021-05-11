@@ -7,17 +7,17 @@ import (
 
 /* core definitions */
 type list struct {
-	elem func() *cell
+	elem func() *atom
 	next func() *list
 }
 
-type cell struct {
+type atom struct {
 	typ reflect.Type
 	val reflect.Value
 }
 
 /* core operations */
-func car(c *list) *cell {
+func car(c *list) *atom {
 	if c == nil {
 		return nil
 	}
@@ -32,10 +32,11 @@ func cdr(c *list) *list {
 }
 
 /* lazy cons */
-func cons(c1 func() *cell, l1 func() *list) *list {
+// the atom func should not be nil, otherwise the list would be broken
+func cons(atom func() *atom, listc func() *list) *list {
 	return &list{
-		elem: c1,
-		next: l1,
+		elem: atom,
+		next: listc,
 	}
 }
 
@@ -44,8 +45,8 @@ func isNil(l *list) bool {
 	return l == nil
 }
 
-func createCell(typ reflect.Type, val reflect.Value) *cell {
-	return &cell{
+func createAtom(typ reflect.Type, val reflect.Value) *atom {
+	return &atom{
 		typ: typ,
 		val: val,
 	}
@@ -53,7 +54,7 @@ func createCell(typ reflect.Type, val reflect.Value) *cell {
 
 func emptyList() *list {
 	return &list{
-		elem: func() *cell { return nil },
+		elem: func() *atom { return nil },
 		next: func() *list { return nil },
 	}
 }
@@ -61,19 +62,19 @@ func emptyList() *list {
 func asSlice(elemTyp reflect.Type, l *list) reflect.Value {
 	typ := reflect.SliceOf(elemTyp)
 	slice := reflect.Zero(typ)
-	processList(l, func(cell *cell) bool {
+	processList(l, func(cell *atom) bool {
 		slice = reflect.Append(slice, cell.val)
 		return true
 	})
 	return slice
 }
 
-func processList(l *list, fn func(*cell) (continueIter bool)) {
+func processList(l *list, fn func(*atom) (continueIter bool)) {
 	if isNil(l) {
 		return
 	}
 	if fn == nil {
-		fn = func(*cell) bool { return true }
+		fn = func(*atom) bool { return true }
 	}
 	for cell := car(l); cell != nil; {
 		if !fn(cell) {
@@ -84,10 +85,10 @@ func processList(l *list, fn func(*cell) (continueIter bool)) {
 	}
 }
 
-func carOnce(fn func() *cell) func() *cell {
+func carOnce(fn func() *atom) func() *atom {
 	var flag int32
-	var cache *cell
-	return func() *cell {
+	var cache *atom
+	return func() *atom {
 		if atomic.CompareAndSwapInt32(&flag, 0, 1) {
 			cache = fn()
 		}
@@ -112,12 +113,12 @@ func mapcar(fn reflect.Value, list1 *list) *list {
 		return list1
 	}
 	return cons(
-		func() *cell {
+		func() *atom {
 			elem := car(list1)
 			if elem == nil {
 				return nil
 			}
-			return createCell(fn.Type().Out(0), fn.Call([]reflect.Value{elem.val})[0])
+			return createAtom(fn.Type().Out(0), fn.Call([]reflect.Value{elem.val})[0])
 		},
 		func() *list {
 			return mapcar(fn, cdr(list1))
@@ -125,24 +126,20 @@ func mapcar(fn reflect.Value, list1 *list) *list {
 	)
 }
 
-func reducecar(list1 *list) *list {
-	return nil
-}
-
 func batchcar(size int, list1 *list) *list {
 	if isNil(list1) {
 		return list1
 	}
 
-	carfn := carOnce(func() *cell {
-		var firstPartition *cell
+	carfn := carOnce(func() *atom {
+		var firstPartition *atom
 		for i := 0; i < size; i++ {
 			elem := car(list1)
 			if elem == nil {
 				break
 			}
 			if firstPartition == nil {
-				firstPartition = &cell{
+				firstPartition = &atom{
 					typ: reflect.SliceOf(elem.typ),
 					val: reflect.Zero(reflect.SliceOf(elem.typ)),
 				}
@@ -164,7 +161,7 @@ func takecar(size int, list1 *list) *list {
 		return list1
 	}
 
-	carfn := carOnce(func() *cell {
+	carfn := carOnce(func() *atom {
 		if size <= 0 {
 			return nil
 		}
@@ -184,7 +181,7 @@ func skipcar(size int, list1 *list) *list {
 	if isNil(list1) {
 		return list1
 	}
-	carfn := carOnce(func() *cell {
+	carfn := carOnce(func() *atom {
 		if size <= 0 {
 			return car(list1)
 		} else {
@@ -210,8 +207,8 @@ func selectcar(fn reflect.Value, list1 *list) *list {
 		return list1
 	}
 	return cons(
-		func() *cell {
-			var elem *cell
+		func() *atom {
+			var elem *atom
 			for elem = car(list1); elem != nil && !fn.Call([]reflect.Value{elem.val})[0].Interface().(bool); {
 				list1 = cdr(list1)
 				elem = car(list1)
@@ -229,8 +226,8 @@ func foreachcar(fn reflect.Value, list1 *list) *list {
 		return list1
 	}
 	return cons(
-		func() *cell {
-			var elem *cell
+		func() *atom {
+			var elem *atom
 			if elem = car(list1); elem != nil {
 				fn.Call([]reflect.Value{elem.val})
 			}
@@ -249,7 +246,7 @@ func concat(list1, list2 *list) *list {
 	if isNil(list2) {
 		return list1
 	}
-	carfn := func() *cell {
+	carfn := func() *atom {
 		if list1 != nil {
 			if elem := car(list1); elem != nil {
 				return elem
@@ -276,7 +273,7 @@ func flattencar(carlist *list, cdrlist *list) *list {
 	makeListOnce := cdrOnce(func() *list {
 		return _flattenCdrCar(cdrlist)
 	})
-	carfn := func() *cell {
+	carfn := func() *atom {
 		if carlist != nil {
 			if elem := car(carlist); elem != nil {
 				return elem
