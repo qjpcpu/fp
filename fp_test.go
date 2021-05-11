@@ -206,10 +206,10 @@ func (suite *TestFPTestSuite) TestReduceChan() {
 	}, out)
 }
 
-func (suite *TestFPTestSuite) TestBatch() {
+func (suite *TestFPTestSuite) TestPartition() {
 	source := []string{"a", "b", "c", "d"}
 
-	out := StreamOf(source).Batch(3).Result().StringsList()
+	out := StreamOf(source).Partition(3).Result().StringsList()
 	suite.Equal([][]string{
 		{"a", "b", "c"},
 		{"d"},

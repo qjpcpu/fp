@@ -106,12 +106,12 @@ out := StreamOf(slice).Map(func(s []string) [][]byte {
 suite.Equal("abcdefghi", string(out))
 #+end_src
 
-*** Batch
+*** Partition
 
 #+begin_src go
 source := []string{"a", "b", "c", "d"}
 
-out := StreamOf(source).Batch(3).Result().StringsList()
+out := StreamOf(source).Partition(3).Result().StringsList()
 suite.Equal([][]string{
 	{"a", "b", "c"},
 	{"d"},

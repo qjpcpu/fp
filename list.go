@@ -135,22 +135,22 @@ func batchcar(size int, list1 *list) *list {
 	}
 
 	carfn := carOnce(func() *cell {
-		var firstBatch *cell
+		var firstPartition *cell
 		for i := 0; i < size; i++ {
 			elem := car(list1)
 			if elem == nil {
 				break
 			}
-			if firstBatch == nil {
-				firstBatch = &cell{
+			if firstPartition == nil {
+				firstPartition = &cell{
 					typ: reflect.SliceOf(elem.typ),
 					val: reflect.Zero(reflect.SliceOf(elem.typ)),
 				}
 			}
-			firstBatch.val = reflect.Append(firstBatch.val, elem.val)
+			firstPartition.val = reflect.Append(firstPartition.val, elem.val)
 			list1 = cdr(list1)
 		}
-		return firstBatch
+		return firstPartition
 	})
 	cdrfn := cdrOnce(func() *list {
 		carfn()

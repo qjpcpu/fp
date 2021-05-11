@@ -20,8 +20,8 @@ type Stream interface {
 	Flatten() Stream
 	// Reduce stream, fn should be func(initval_type, element_type) initval_type
 	Reduce(initval interface{}, fn interface{}) Value
-	// Batch stream, split stream into small batch
-	Batch(size int) Stream
+	// Partition stream, split stream into small batch
+	Partition(size int) Stream
 	// Fisrt value of stream
 	First() Value
 	// IsEmpty stream
@@ -262,7 +262,7 @@ func (q *stream) Reduce(initval interface{}, fn interface{}) Value {
 	return Value{typ: typ, val: memo}
 }
 
-func (q *stream) Batch(size int) Stream {
+func (q *stream) Partition(size int) Stream {
 	if size < 1 {
 		panic("batch size should be greater than 0")
 	}
