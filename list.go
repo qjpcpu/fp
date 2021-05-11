@@ -177,6 +177,30 @@ func takecar(size int, list1 *list) *list {
 	return cons(carfn, cdrfn)
 }
 
+func takeWhile(fn reflect.Value, list1 *list) *list {
+	if isNil(list1) {
+		return list1
+	}
+
+	carfn := carOnce(func() *atom {
+		elem := car(list1)
+		if elem == nil {
+			return nil
+		}
+		if !fn.Call([]reflect.Value{elem.val})[0].Bool() {
+			return nil
+		}
+		return elem
+	})
+	cdrfn := cdrOnce(func() *list {
+		if carfn() == nil {
+			return nil
+		}
+		return takeWhile(fn, cdr(list1))
+	})
+	return cons(carfn, cdrfn)
+}
+
 func skipcar(size int, list1 *list) *list {
 	if isNil(list1) {
 		return list1
@@ -198,6 +222,28 @@ func skipcar(size int, list1 *list) *list {
 	cdrfn := cdrOnce(func() *list {
 		carfn()
 		return cdr(list1)
+	})
+	return cons(carfn, cdrfn)
+}
+
+func skipWhile(fn reflect.Value, list1 *list) *list {
+	if isNil(list1) {
+		return list1
+	}
+
+	var left *list
+	carfn := carOnce(func() *atom {
+		var elem *atom
+		left = list1
+		for elem = car(list1); elem != nil && fn.Call([]reflect.Value{elem.val})[0].Bool(); {
+			left = cdr(left)
+			elem = car(left)
+		}
+		return elem
+	})
+	cdrfn := cdrOnce(func() *list {
+		carfn()
+		return cdr(left)
 	})
 	return cons(carfn, cdrfn)
 }

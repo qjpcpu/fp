@@ -525,3 +525,44 @@ func (suite *TestFPTestSuite) TestJoinNilStream() {
 	out = StreamOf(slice).Join(&nilStream{}).Result().Strings()
 	suite.Equal([]string{"a"}, out)
 }
+
+func (suite *TestFPTestSuite) TestTakeWhile() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).TakeWhile(func(v string) bool {
+		return v < "c"
+	}).Result().Strings()
+	suite.Equal([]string{"a", "b"}, out)
+
+	out = StreamOf(slice).TakeWhile(func(v string) bool {
+		return v < "a"
+	}).Result().Strings()
+	suite.Nil(out)
+}
+
+func (suite *TestFPTestSuite) TestSkipWhile() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).SkipWhile(func(v string) bool {
+		return v < "c"
+	}).Result().Strings()
+	suite.Equal([]string{"c"}, out)
+
+	out = StreamOf(slice).SkipWhile(func(v string) bool {
+		return v <= "c"
+	}).Result().Strings()
+	suite.Nil(out)
+}
+
+func (suite *TestFPTestSuite) TestTakeWhileDropLeft() {
+	slice := []string{"a", "b", "c", "d", "e"}
+	var before, after []string
+	out := StreamOf(slice).Foreach(func(s string) {
+		before = append(before, s)
+	}).TakeWhile(func(v string) bool {
+		return v < "c"
+	}).Foreach(func(s string) {
+		after = append(after, s)
+	}).Result().Strings()
+	suite.Equal([]string{"a", "b"}, out)
+	suite.Equal([]string{"a", "b", "c"}, before)
+	suite.Equal([]string{"a", "b"}, after)
+}

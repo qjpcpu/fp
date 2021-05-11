@@ -28,8 +28,12 @@ type Stream interface {
 	IsEmpty() bool
 	// Take first n elements
 	Take(n int) Stream
+	// TakeWhile fn return false
+	TakeWhile(fn interface{}) Stream
 	// Skip first n elements
 	Skip(size int) Stream
+	// SkipWhile fn return false
+	SkipWhile(fn interface{}) Stream
 	// Sort stream, this is an aggregate op, so it would block stream
 	Sort() Stream
 	// SortBy fn stream, fn should be func(element_type,element_type) bool, this is an aggregate op, so it would block stream
@@ -139,8 +143,16 @@ func (q *stream) Take(size int) Stream {
 	return newStream(q.expectElemTyp, takecar(size, q.list))
 }
 
+func (q *stream) TakeWhile(fn interface{}) Stream {
+	return newStream(q.expectElemTyp, takeWhile(reflect.ValueOf(fn), q.list))
+}
+
 func (q *stream) Skip(size int) Stream {
 	return newStream(q.expectElemTyp, skipcar(size, q.list))
+}
+
+func (q *stream) SkipWhile(fn interface{}) Stream {
+	return newStream(q.expectElemTyp, skipWhile(reflect.ValueOf(fn), q.list))
 }
 
 func (q *stream) First() Value {
