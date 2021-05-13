@@ -32,7 +32,7 @@ type kvStream struct {
 	keyType, valType reflect.Type
 }
 
-func KVStreamOf(m interface{}) *kvStream {
+func KVStreamOf(m interface{}) KVStream {
 	if reflect.TypeOf(m).Kind() != reflect.Map {
 		panic("argument should be map")
 	}
