@@ -126,7 +126,7 @@ func mapcar(fn reflect.Value, list1 *list) *list {
 	)
 }
 
-func batchcar(size int, list1 *list) *list {
+func partitoncar(size int, list1 *list) *list {
 	if isNil(list1) {
 		return list1
 	}
@@ -151,7 +151,40 @@ func batchcar(size int, list1 *list) *list {
 	})
 	cdrfn := cdrOnce(func() *list {
 		carfn()
-		return batchcar(size, list1)
+		return partitoncar(size, list1)
+	})
+	return cons(carfn, cdrfn)
+}
+
+func partitoncarby(splitfn reflect.Value, includingSplittor bool, list1 *list) *list {
+	if isNil(list1) {
+		return list1
+	}
+
+	carfn := carOnce(func() *atom {
+		var firstPartition *atom
+		for isSplittor := false; !isSplittor; {
+			elem := car(list1)
+			if elem == nil {
+				break
+			}
+			if firstPartition == nil {
+				firstPartition = &atom{
+					typ: reflect.SliceOf(elem.typ),
+					val: reflect.Zero(reflect.SliceOf(elem.typ)),
+				}
+			}
+			isSplittor = splitfn.Call([]reflect.Value{elem.val})[0].Bool()
+			if !isSplittor || includingSplittor {
+				firstPartition.val = reflect.Append(firstPartition.val, elem.val)
+			}
+			list1 = cdr(list1)
+		}
+		return firstPartition
+	})
+	cdrfn := cdrOnce(func() *list {
+		carfn()
+		return partitoncarby(splitfn, includingSplittor, list1)
 	})
 	return cons(carfn, cdrfn)
 }

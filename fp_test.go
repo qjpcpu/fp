@@ -354,6 +354,19 @@ func (suite *TestFPTestSuite) TestDeepFlatten2() {
 	suite.Equal("", string(out))
 }
 
+func (suite *TestFPTestSuite) TestDeepFlatten3() {
+	datach := make(chan string, 1)
+	datach <- "Value2"
+	slice := []Stream{StreamOf([]string{"Value1"}), StreamOf(datach)}
+	subSource := make(chan Stream, 1)
+	subSource <- StreamOf(slice)
+	source := make(chan Stream, 1)
+	source <- StreamOf(subSource)
+
+	out := StreamOf(source).Flatten().Flatten().Flatten().Take(2).Result().Strings()
+	suite.Equal([]string{"Value1", "Value2"}, out)
+}
+
 func (suite *TestFPTestSuite) TestHybridFlatten() {
 	slice := []chan string{
 		make(chan string, 3),
@@ -565,4 +578,28 @@ func (suite *TestFPTestSuite) TestTakeWhileDropLeft() {
 	suite.Equal([]string{"a", "b"}, out)
 	suite.Equal([]string{"a", "b", "c"}, before)
 	suite.Equal([]string{"a", "b"}, after)
+}
+
+func (suite *TestFPTestSuite) TestPartitionByAndIncludeSplittor() {
+	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).Result().StringsList()
+	suite.Equal([][]string{
+		{"a", "b", "c"},
+		{"d", "e", "c"},
+		{"c"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor() {
+	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).Result().StringsList()
+	suite.Equal([][]string{
+		{"a", "b"},
+		{"d", "e"},
+		nil,
+	}, out)
 }

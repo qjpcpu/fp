@@ -15,22 +15,23 @@ func (ns *nilStream) Reduce(initval interface{}, fn interface{}) Value {
 		val: reflect.ValueOf(initval),
 	}
 }
-func (ns *nilStream) Partition(size int) Stream       { return ns }
-func (ns *nilStream) First() Value                    { return Value{} }
-func (ns *nilStream) IsEmpty() bool                   { return true }
-func (ns *nilStream) Take(n int) Stream               { return ns }
-func (ns *nilStream) Skip(size int) Stream            { return ns }
-func (ns *nilStream) TakeWhile(interface{}) Stream    { return ns }
-func (ns *nilStream) SkipWhile(interface{}) Stream    { return ns }
-func (ns *nilStream) Sort() Stream                    { return ns }
-func (ns *nilStream) SortBy(fn interface{}) Stream    { return ns }
-func (ns *nilStream) Uniq() Stream                    { return ns }
-func (ns *nilStream) UniqBy(fn interface{}) Stream    { return ns }
-func (ns *nilStream) Size() int                       { return 0 }
-func (ns *nilStream) Contains(interface{}) bool       { return false }
-func (ns *nilStream) ToSource() Source                { return nil }
-func (ns *nilStream) Join(s Stream) Stream            { return s }
-func (ns *nilStream) GroupBy(fn interface{}) KVStream { return nil }
+func (ns *nilStream) Partition(size int) Stream            { return ns }
+func (ns *nilStream) PartitionBy(interface{}, bool) Stream { return ns }
+func (ns *nilStream) First() Value                         { return Value{} }
+func (ns *nilStream) IsEmpty() bool                        { return true }
+func (ns *nilStream) Take(n int) Stream                    { return ns }
+func (ns *nilStream) Skip(size int) Stream                 { return ns }
+func (ns *nilStream) TakeWhile(interface{}) Stream         { return ns }
+func (ns *nilStream) SkipWhile(interface{}) Stream         { return ns }
+func (ns *nilStream) Sort() Stream                         { return ns }
+func (ns *nilStream) SortBy(fn interface{}) Stream         { return ns }
+func (ns *nilStream) Uniq() Stream                         { return ns }
+func (ns *nilStream) UniqBy(fn interface{}) Stream         { return ns }
+func (ns *nilStream) Size() int                            { return 0 }
+func (ns *nilStream) Contains(interface{}) bool            { return false }
+func (ns *nilStream) ToSource() Source                     { return nil }
+func (ns *nilStream) Join(s Stream) Stream                 { return s }
+func (ns *nilStream) GroupBy(fn interface{}) KVStream      { return nil }
 func (ns *nilStream) Append(v interface{}) Stream {
 	typ, val := reflect.TypeOf(v), reflect.ValueOf(v)
 	slice := reflect.MakeSlice(reflect.SliceOf(typ), 1, 1)

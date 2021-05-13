@@ -42,7 +42,7 @@ e.g. create stream from custom source
 type Source interface {
 	// source element type
 	ElemType() reflect.Type
-	// first element fo source
+	// first element of source
 	CAR() reflect.Value
 	// the rest source data except car
 	CDR() Source
@@ -125,7 +125,7 @@ out := StreamOf(slice).Map(func(s []string) [][]byte {
 suite.Equal("abcdefghi", string(out))
 #+end_src
 
-*** Partition
+*** Partition/PartitionBy
 
 #+begin_src go
 source := []string{"a", "b", "c", "d"}
@@ -134,6 +134,16 @@ out := StreamOf(source).Partition(3).Result().StringsList()
 suite.Equal([][]string{
 	{"a", "b", "c"},
 	{"d"},
+}, out)
+
+slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+out := StreamOf(slice).PartitionBy(func(s string) bool {
+	return s == "c"
+}, true).Result().StringsList()
+suite.Equal([][]string{
+	{"a", "b", "c"},
+	{"d", "e", "c"},
+	{"c"},
 }, out)
 #+end_src
 
@@ -242,6 +252,32 @@ suite.Equal(2, out)
 slice := []string{"abc", "de", "f"}
 q := StreamOf(slice)
 suite.True(q.Contains("de"))
+#+end_src
+
+*** GroupBy
+
+#+begin_src go
+slice1 := []string{"abc", "de", "f", "gh"}
+q := StreamOf(slice1).Map(strings.ToUpper).GroupBy(func(s string) int {
+	return len(s)
+}).Result().(map[int][]string)
+suite.Equal(map[int][]string{
+	1: {"F"},
+	2: {"DE", "GH"},
+	3: {"ABC"},
+}, q)
+#+end_src
+
+*** Append/Prepend
+
+#+begin_src go
+slice := []string{"abc", "de"}
+out := StreamOf(slice).Append("A").Result().Strings()
+suite.Equal([]string{"abc", "de", "A"}, out)
+
+slice := []string{"abc", "de"}
+out := StreamOf(slice).Prepend("A").Result().Strings()
+suite.Equal([]string{"A", "abc", "de"}, out)
 #+end_src
 
 ** Result

@@ -22,6 +22,8 @@ type Stream interface {
 	Reduce(initval interface{}, fn interface{}) Value
 	// Partition stream, split stream into small batch
 	Partition(size int) Stream
+	// PartitionBy func(elem_type) bool
+	PartitionBy(fn interface{}, includeSplittor bool) Stream
 	// First value of stream
 	First() Value
 	// IsEmpty stream
@@ -291,7 +293,11 @@ func (q *stream) Partition(size int) Stream {
 	if size < 1 {
 		panic("batch size should be greater than 0")
 	}
-	return newStream(reflect.SliceOf(q.expectElemTyp), batchcar(size, q.list))
+	return newStream(reflect.SliceOf(q.expectElemTyp), partitoncar(size, q.list))
+}
+
+func (q *stream) PartitionBy(fn interface{}, includeSplittor bool) Stream {
+	return newStream(reflect.SliceOf(q.expectElemTyp), partitoncarby(reflect.ValueOf(fn), includeSplittor, q.list))
 }
 
 func (q *stream) ToSlice(dst interface{}) {

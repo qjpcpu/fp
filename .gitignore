@@ -1,2 +1,5 @@
 .idea
 /example
+fp.test
+memprofile.out
+profile.out
