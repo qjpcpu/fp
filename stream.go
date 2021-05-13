@@ -385,16 +385,13 @@ func (q *stream) ElemType() reflect.Type {
 	return q.expectElemTyp
 }
 
-func (q *stream) CAR() reflect.Value {
+func (q *stream) Next() (reflect.Value, bool) {
 	if elem := car(q.list); elem == nil {
-		return reflect.Value{}
+		return reflect.Value{}, false
 	} else {
-		return elem.val
+		q.list = cdr(q.list)
+		return elem.val, true
 	}
-}
-
-func (q *stream) CDR() Source {
-	return newStream(q.expectElemTyp, cdr(q.list))
 }
 
 func (q *stream) getValue() reflect.Value {

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"io"
 	"reflect"
-	"sync"
 )
 
 func StreamOf(arr interface{}) Stream {
@@ -22,10 +21,8 @@ func StreamOfSource(s Source) Stream {
 type Source interface {
 	// ElemType element type
 	ElemType() reflect.Type
-	// CAR Contents of the Address part of Register number
-	CAR() reflect.Value
-	// CDR Contents of the Decrement part of the Register
-	CDR() Source
+	// Next element
+	Next() (reflect.Value, bool)
 }
 
 func makeList(typ reflect.Type, val reflect.Value) *list {
@@ -51,15 +48,17 @@ func makeListWithElemType(typ reflect.Type, val reflect.Value) (reflect.Type, *l
 func makeListBySource(elemTyp reflect.Type, source Source) *list {
 	if source != nil {
 		el := emptyList()
-		el.elem = carOnce(func() *atom {
-			if c := source.CAR(); c.IsValid() {
+		carfn := carOnce(func() *atom {
+			if c, ok := source.Next(); ok {
 				return createAtom(elemTyp, c)
 			}
 			return nil
 		})
+		el.elem = carfn
 
 		el.next = cdrOnce(func() *list {
-			return makeListBySource(elemTyp, source.CDR())
+			_ = carfn()
+			return makeListBySource(elemTyp, source)
 		})
 		return el
 	}
@@ -70,6 +69,7 @@ func makeListBySource(elemTyp reflect.Type, source Source) *list {
 type sliceSource struct {
 	elemType reflect.Type
 	arr      reflect.Value
+	offset   int
 }
 
 func newSliceSource(elemTyp reflect.Type, arr reflect.Value) Source {
@@ -81,37 +81,25 @@ func newSliceSource(elemTyp reflect.Type, arr reflect.Value) Source {
 
 func (ss *sliceSource) ElemType() reflect.Type { return ss.elemType }
 
-func (ss *sliceSource) CAR() reflect.Value {
-	if ss.arr.Len() == 0 {
-		return reflect.Value{}
+func (ss *sliceSource) Next() (reflect.Value, bool) {
+	if ss.offset >= ss.arr.Len() {
+		return reflect.Value{}, false
 	}
-	return ss.arr.Index(0)
-}
-
-func (ss *sliceSource) CDR() Source {
-	if ss.arr.Len() <= 1 {
-		return nil
-	}
-	return &sliceSource{
-		elemType: ss.elemType,
-		arr:      ss.arr.Slice(1, ss.arr.Len()),
-	}
+	offset := ss.offset
+	ss.offset++
+	return ss.arr.Index(offset), true
 }
 
 /* channel stream */
 type channelSource struct {
 	elemType reflect.Type
-	once     *sync.Once
 	ch       reflect.Value
-	first    reflect.Value
 }
 
 func newChannelSource(elemTyp reflect.Type, ch reflect.Value) Source {
 	return &channelSource{
 		elemType: elemTyp,
-		once:     new(sync.Once),
 		ch:       ch,
-		first:    reflect.Value{},
 	}
 }
 
@@ -119,37 +107,21 @@ func (cs *channelSource) ElemType() reflect.Type {
 	return cs.elemType
 }
 
-func (cs *channelSource) CAR() reflect.Value {
-	cs.once.Do(func() {
-		if _, recv, ok := reflect.Select([]reflect.SelectCase{
-			{
-				Dir:  reflect.SelectRecv,
-				Chan: cs.ch,
-			},
-		}); ok {
-			cs.first = recv
-		}
-	})
-	return cs.first
-}
-
-func (cs *channelSource) CDR() Source {
-	if v := cs.CAR(); !v.IsValid() {
-		return nil
+func (cs *channelSource) Next() (reflect.Value, bool) {
+	if _, recv, ok := reflect.Select([]reflect.SelectCase{
+		{
+			Dir:  reflect.SelectRecv,
+			Chan: cs.ch,
+		},
+	}); ok {
+		return recv, true
 	}
-	return &channelSource{
-		elemType: cs.elemType,
-		once:     new(sync.Once),
-		ch:       cs.ch,
-		first:    reflect.Value{},
-	}
+	return reflect.Value{}, false
 }
 
 type lineSource struct {
 	s       *bufio.Scanner
 	elemTyp reflect.Type
-	line    reflect.Value
-	read    sync.Once
 }
 
 func NewLineSource(r io.Reader) Source {
@@ -163,21 +135,9 @@ func (ls *lineSource) ElemType() reflect.Type {
 	return ls.elemTyp
 }
 
-func (ls *lineSource) CAR() reflect.Value {
-	ls.read.Do(func() {
-		if ls.s.Scan() {
-			ls.line = reflect.ValueOf(ls.s.Text())
-		}
-	})
-	return ls.line
-}
-
-func (ls *lineSource) CDR() Source {
-	if v := ls.CAR(); !v.IsValid() {
-		return nil
+func (ls *lineSource) Next() (reflect.Value, bool) {
+	if ls.s.Scan() {
+		return reflect.ValueOf(ls.s.Text()), true
 	}
-	return &lineSource{
-		s:       ls.s,
-		elemTyp: ls.elemTyp,
-	}
+	return reflect.Value{}, false
 }

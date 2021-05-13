@@ -42,10 +42,8 @@ e.g. create stream from custom source
 type Source interface {
 	// source element type
 	ElemType() reflect.Type
-	// first element of source
-	CAR() reflect.Value
-	// the rest source data except car
-	CDR() Source
+	// Next element
+	Next() (reflect.Value, bool)
 }
 
 StreamOfSource(mySource)
