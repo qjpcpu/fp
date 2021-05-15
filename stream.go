@@ -171,7 +171,7 @@ func (q *stream) Sort() Stream {
 	if isNil(q.list) {
 		val := Value{
 			typ: q.expectElemTyp,
-			val: reflect.Zero(q.expectElemTyp),
+			val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
 		}
 		elemTyp, list := makeListWithElemType(val.typ, val.val)
 		return newStream(elemTyp, list)
@@ -249,7 +249,7 @@ func (q *stream) SortBy(fn interface{}) Stream {
 	if isNil(q.list) {
 		val := Value{
 			typ: q.expectElemTyp,
-			val: reflect.Zero(q.expectElemTyp),
+			val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
 		}
 		elemTyp, list := makeListWithElemType(val.typ, val.val)
 		return newStream(elemTyp, list)
