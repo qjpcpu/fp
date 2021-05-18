@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -610,4 +611,44 @@ func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor() {
 		{"d", "e"},
 		nil,
 	}, out)
+}
+
+func (suite *TestFPTestSuite) TestCounter() {
+	source := NewCounter(3)
+	out := StreamOf(source).Result().Ints()
+	suite.Equal([]int{0, 1, 2}, out)
+}
+
+func (suite *TestFPTestSuite) TestCounterRange() {
+	source := NewCounterRange(1, 3)
+	out := StreamOf(source).Result().Ints()
+	suite.Equal([]int{1, 2, 3}, out)
+}
+
+func (suite *TestFPTestSuite) TestTickerSource() {
+	source := NewTickerSource(time.Millisecond)
+	defer source.Stop()
+	now := time.Now()
+	out := StreamOf(source).Take(3).Size()
+	cost := time.Since(now).Milliseconds()
+	suite.Equal(3, out)
+	suite.Equal(int64(3), cost)
+}
+
+func (suite *TestFPTestSuite) TestDelaySource() {
+	source := NewDelaySource(time.Millisecond)
+	now := time.Now()
+	out := StreamOf(source).Take(3).Size()
+	cost := time.Since(now).Milliseconds()
+	suite.Equal(3, out)
+	suite.Equal(int64(3), cost)
+}
+
+func (suite *TestFPTestSuite) TestDelaySource2() {
+	source := NewDelaySource(time.Millisecond)
+	now := time.Now()
+	s := 3
+	StreamOf(source).Take(s).Foreach(func(time.Time) { time.Sleep(time.Millisecond) }).Run()
+	cost := time.Since(now).Milliseconds()
+	suite.Equal(int64(s), cost/2)
 }
