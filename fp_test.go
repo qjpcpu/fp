@@ -76,19 +76,6 @@ func (suite *TestFPTestSuite) TestFlatMapErr() {
 	suite.ElementsMatch(out, []string{"A", "C"})
 }
 
-func (suite *TestFPTestSuite) TestFlatMapTwice() {
-	slice := []string{"a", "b", "c"}
-	out := StreamOf(slice).FlatMap(func(e string) ([]byte, bool) {
-		return []byte(strings.ToUpper(e)), e == "b"
-	}).Result().Bytes()
-	suite.ElementsMatch([]byte("B"), out)
-
-	out = StreamOf(slice).FlatMap(func(e string) ([]byte, bool) {
-		return []byte(strings.ToUpper(e)), e != "b"
-	}).Result().Bytes()
-	suite.ElementsMatch([]byte("AC"), out)
-}
-
 func (suite *TestFPTestSuite) TestRepeatableGetValueMapString() {
 	slice := []string{"a", "b", "c"}
 	q := StreamOf(slice).Map(strings.ToUpper)
@@ -497,6 +484,26 @@ func (suite *TestFPTestSuite) TestEmptyFlatten() {
 		Result().
 		Strings()
 	suite.Equal([]string{"b", "c"}, out)
+}
+
+func (suite *TestFPTestSuite) TestEmptyFlatten2() {
+	slice := [][]string{
+		{"a", "b"},
+		nil,
+		{},
+		{"c"},
+		nil,
+		{},
+		{""},
+		{},
+		nil,
+	}
+
+	out := StreamOf(slice).
+		Flatten().
+		Result().
+		Strings()
+	suite.Equal([]string{"a", "b", "c", ""}, out)
 }
 
 func (suite *TestFPTestSuite) TestHybridComplexFlatten() {

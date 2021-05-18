@@ -372,9 +372,14 @@ func flatten(list1 *list) *list {
 }
 
 func flattencar(carlist *list, cdrlist *list) *list {
-	makeListOnce := cdrOnce(func() *list {
-		return _flattenCdrCar(cdrlist)
-	})
+	var _carlist, _cdrlist *list
+	var flag int32
+	makeListOnce := func() (*list, *list) {
+		if atomic.CompareAndSwapInt32(&flag, 0, 1) {
+			_carlist, _cdrlist = _flattenCdrCar(cdrlist)
+		}
+		return _carlist, _cdrlist
+	}
 	carfn := func() *atom {
 		if carlist != nil {
 			if elem := car(carlist); elem != nil {
@@ -382,7 +387,8 @@ func flattencar(carlist *list, cdrlist *list) *list {
 			}
 		}
 		if cdrlist != nil {
-			return car(makeListOnce())
+			carlist, cdrlist = makeListOnce()
+			return car(carlist)
 		}
 		return nil
 	}
@@ -393,22 +399,23 @@ func flattencar(carlist *list, cdrlist *list) *list {
 			}
 		}
 		if cdrlist != nil {
-			return flattencar(cdr(makeListOnce()), cdr(cdrlist))
+			carlist, cdrlist = makeListOnce()
+			return flattencar(cdr(carlist), cdrlist)
 		}
 		return nil
 	}
 	return cons(carfn, cdrfn)
 }
 
-func _flattenCdrCar(cdrlist *list) *list {
+func _flattenCdrCar(cdrlist *list) (*list, *list) {
 	elem := car(cdrlist)
 	if elem == nil {
-		return nil
+		return nil, nil
 	}
 	subl := makeList(elem.typ, elem.val)
 	/* oops, this is a empty list */
 	if car(subl) == nil {
 		return _flattenCdrCar(cdr(cdrlist))
 	}
-	return subl
+	return subl, cdr(cdrlist)
 }
