@@ -10,6 +10,8 @@ import (
 type Stream interface {
 	// Map stream to another, fn should be func(element_type) another_type
 	Map(fn interface{}) Stream
+	// FlatMap stream to another, fn should be func(element_type) another_slice_type
+	FlatMap(fn interface{}) Stream
 	// Filter stream, fn should be func(element_type) bool
 	Filter(fn interface{}) Stream
 	// Reject stream, fn should be func(element_type) bool
@@ -85,6 +87,10 @@ func (q *stream) Map(fn interface{}) Stream {
 	return newStream(fnVal.Type().Out(0), mapcar(fnVal, q.list))
 }
 
+func (q *stream) FlatMap(fn interface{}) Stream {
+	return q.Map(fn).Flatten()
+}
+
 func (q *stream) Filter(fn interface{}) Stream {
 	fnVal := reflect.ValueOf(fn)
 	return newStream(q.expectElemTyp, selectcar(fnVal, q.list))
@@ -99,7 +105,7 @@ func (q *stream) Flatten() Stream {
 		} else if e := car(l); e != nil {
 			return newStream(e.typ, l)
 		}
-		return &nilStream{}
+		return newNilStream()
 	}
 	if kind := q.expectElemTyp.Kind(); kind != reflect.Chan && kind != reflect.Slice && kind != reflect.Array {
 		panic(q.expectElemTyp.String() + " can not be flatten")

@@ -314,6 +314,14 @@ func (suite *TestFPTestSuite) TestFlatten() {
 	suite.Equal("abcdef", string(out))
 }
 
+func (suite *TestFPTestSuite) TestFlatMap() {
+	slice := []string{"abc", "de", "f"}
+	out := StreamOf(slice).FlatMap(func(s string) []byte {
+		return []byte(s)
+	}).Result().Bytes()
+	suite.Equal("abcdef", string(out))
+}
+
 func (suite *TestFPTestSuite) TestDeepFlatten() {
 	slice := [][]string{
 		{"abc", "de", "f"},
@@ -535,7 +543,7 @@ func (suite *TestFPTestSuite) TestJoinNilStream() {
 	out := new(nilStream).Join(StreamOf(slice)).Result().Strings()
 	suite.Equal([]string{"a"}, out)
 
-	out = StreamOf(slice).Join(&nilStream{}).Result().Strings()
+	out = StreamOf(slice).Join(newNilStream()).Result().Strings()
 	suite.Equal([]string{"a"}, out)
 }
 
