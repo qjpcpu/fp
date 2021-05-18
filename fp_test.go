@@ -76,6 +76,19 @@ func (suite *TestFPTestSuite) TestFlatMapErr() {
 	suite.ElementsMatch(out, []string{"A", "C"})
 }
 
+func (suite *TestFPTestSuite) TestFlatMapTwice() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).FlatMap(func(e string) ([]byte, bool) {
+		return []byte(strings.ToUpper(e)), e == "b"
+	}).Result().Bytes()
+	suite.ElementsMatch([]byte("B"), out)
+
+	out = StreamOf(slice).FlatMap(func(e string) ([]byte, bool) {
+		return []byte(strings.ToUpper(e)), e != "b"
+	}).Result().Bytes()
+	suite.ElementsMatch([]byte("AC"), out)
+}
+
 func (suite *TestFPTestSuite) TestRepeatableGetValueMapString() {
 	slice := []string{"a", "b", "c"}
 	q := StreamOf(slice).Map(strings.ToUpper)

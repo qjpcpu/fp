@@ -92,9 +92,11 @@ func (q *stream) FlatMap(fn interface{}) Stream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	if fnTyp.NumOut() == 2 && fnTyp.Out(1) == boolType {
-		return q.flatMapBoolean(fnTyp, fnVal)
+		s, _ := q.flatMapBoolean(fnTyp, fnVal).tryFlatten()
+		return s
 	} else if fnTyp.NumOut() == 2 && fnTyp.Out(1).ConvertibleTo(errType) {
-		return q.flatMapError(fnTyp, fnVal)
+		s, _ := q.flatMapError(fnTyp, fnVal).tryFlatten()
+		return s
 	}
 	return q.Map(fn).Flatten()
 }
@@ -105,20 +107,28 @@ func (q *stream) Filter(fn interface{}) Stream {
 }
 
 func (q *stream) Flatten() Stream {
+	s, ok := q.tryFlatten()
+	if !ok {
+		panic(q.expectElemTyp.String() + " can not be flatten")
+	}
+	return s
+}
+
+func (q *stream) tryFlatten() (Stream, bool) {
 	if q.expectElemTyp == streamType {
 		/* sadly, i can't know the detail element type cause of our lazy evaluation */
 		/* i have to car for the first element to get elem type */
 		/* well, it's not lazy enough here */
 		if l := flatten(q.list); l == nil {
 		} else if e := car(l); e != nil {
-			return newStream(e.typ, l)
+			return newStream(e.typ, l), true
 		}
-		return newNilStream()
+		return newNilStream(), true
 	}
 	if kind := q.expectElemTyp.Kind(); kind != reflect.Chan && kind != reflect.Slice && kind != reflect.Array {
-		panic(q.expectElemTyp.String() + " can not be flatten")
+		return q, false
 	}
-	return newStream(q.expectElemTyp.Elem(), flatten(q.list))
+	return newStream(q.expectElemTyp.Elem(), flatten(q.list)), true
 }
 
 func (q *stream) Foreach(fn interface{}) Stream {
@@ -418,11 +428,11 @@ func (q *stream) getValue() reflect.Value {
 	return q.val
 }
 
-func (q *stream) flatMapBoolean(fnTyp reflect.Type, fnVal reflect.Value) Stream {
+func (q *stream) flatMapBoolean(fnTyp reflect.Type, fnVal reflect.Value) *stream {
 	return newStream(fnTyp.Out(0), mapOptionCar(fnVal, q.list))
 }
 
-func (q *stream) flatMapError(fnTyp reflect.Type, fnVal reflect.Value) Stream {
+func (q *stream) flatMapError(fnTyp reflect.Type, fnVal reflect.Value) *stream {
 	outTyp := funcOutputs(fnTyp)
 	outTyp[1] = boolType
 	wrapTyp := reflect.FuncOf(funcInputs(fnTyp), outTyp, false)
