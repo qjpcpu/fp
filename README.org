@@ -66,6 +66,35 @@ StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
 suite.ElementsMatch(out, []string{"A", "B", "C"})
 #+end_src
 
+*** FlatMap
+
+#+begin_src go
+// flatmap optional boolean values
+slice := []string{"a", "b", "c"}
+var out []string
+StreamOf(slice).FlatMap(func(e string) (string, bool) {
+	return strings.ToUpper(e), e == "b"
+}).ToSlice(&out)
+suite.ElementsMatch(out, []string{"B"})
+
+// flatmap optional error values
+slice := []string{"a", "b", "c"}
+out = StreamOf(slice).FlatMap(func(e string) (string, error) {
+	if e == "b" {
+		return strings.ToUpper(e), errors.New("error")
+	}
+	return strings.ToUpper(e), nil
+}).Result().Strings()
+suite.ElementsMatch(out, []string{"A", "C"})
+
+// flatmap sub collection
+slice := []string{"abc", "de", "f"}
+out := StreamOf(slice).FlatMap(func(s string) []byte {
+	return []byte(s)
+}).Result().Bytes()
+suite.Equal("abcdef", string(out))
+#+end_src
+
 *** Filter
 
 #+begin_src go

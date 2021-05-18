@@ -83,11 +83,19 @@ func newStream(expTyp reflect.Type, list *list) *stream {
 }
 
 func (q *stream) Map(fn interface{}) Stream {
+	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
-	return newStream(fnVal.Type().Out(0), mapcar(fnVal, q.list))
+	return newStream(fnTyp.Out(0), mapcar(fnVal, q.list))
 }
 
 func (q *stream) FlatMap(fn interface{}) Stream {
+	fnTyp := reflect.TypeOf(fn)
+	fnVal := reflect.ValueOf(fn)
+	if fnTyp.NumOut() == 2 && fnTyp.Out(1) == boolType {
+		return q.flatMapBoolean(fnTyp, fnVal)
+	} else if fnTyp.NumOut() == 2 && fnTyp.Out(1).ConvertibleTo(errType) {
+		return q.flatMapError(fnTyp, fnVal)
+	}
 	return q.Map(fn).Flatten()
 }
 
@@ -408,6 +416,24 @@ func (q *stream) getValue() reflect.Value {
 		q.val = asSlice(q.expectElemTyp, tmp)
 	})
 	return q.val
+}
+
+func (q *stream) flatMapBoolean(fnTyp reflect.Type, fnVal reflect.Value) Stream {
+	return newStream(fnTyp.Out(0), mapOptionCar(fnVal, q.list))
+}
+
+func (q *stream) flatMapError(fnTyp reflect.Type, fnVal reflect.Value) Stream {
+	outTyp := funcOutputs(fnTyp)
+	outTyp[1] = boolType
+	wrapTyp := reflect.FuncOf(funcInputs(fnTyp), outTyp, false)
+	wrapFn := reflect.MakeFunc(wrapTyp, func(in []reflect.Value) []reflect.Value {
+		out := fnVal.Call(in)
+		if err, ok := out[1].Interface().(error); ok && err != nil {
+			return []reflect.Value{out[0], reflect.ValueOf(false)}
+		}
+		return []reflect.Value{out[0], reflect.ValueOf(true)}
+	})
+	return newStream(fnTyp.Out(0), mapOptionCar(wrapFn, q.list))
 }
 
 func (q *stream) compare(a, b reflect.Value) int {

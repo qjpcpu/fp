@@ -2,6 +2,7 @@ package fp
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -29,6 +30,50 @@ func (suite *TestFPTestSuite) TestMapString() {
 	var out []string
 	StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
 	suite.ElementsMatch(out, []string{"A", "B", "C"})
+}
+
+func (suite *TestFPTestSuite) TestMapSelectString() {
+	slice := []string{"a", "b", "c"}
+	var out []string
+	StreamOf(slice).FlatMap(func(e string) (string, bool) {
+		return strings.ToUpper(e), e == "b"
+	}).ToSlice(&out)
+	suite.ElementsMatch(out, []string{"B"})
+
+	out = StreamOf(slice).FlatMap(func(e string) (string, bool) {
+		return strings.ToUpper(e), e == "x"
+	}).Result().Strings()
+	suite.ElementsMatch(out, []string{})
+
+	out = StreamOf(slice).FlatMap(func(e string) (string, bool) {
+		return strings.ToUpper(e), e == "a" || e == "c"
+	}).Result().Strings()
+	suite.ElementsMatch(out, []string{"A", "C"})
+}
+
+func (suite *TestFPTestSuite) TestFlatMapErr() {
+	gerr := func(c bool) error {
+		if c {
+			return errors.New("ERR")
+		}
+		return nil
+	}
+	slice := []string{"a", "b", "c"}
+	var out []string
+	StreamOf(slice).FlatMap(func(e string) (string, error) {
+		return strings.ToUpper(e), gerr(e == "a" || e == "c")
+	}).ToSlice(&out)
+	suite.ElementsMatch(out, []string{"B"})
+
+	out = StreamOf(slice).FlatMap(func(e string) (string, error) {
+		return strings.ToUpper(e), gerr(true)
+	}).Result().Strings()
+	suite.ElementsMatch(out, []string{})
+
+	out = StreamOf(slice).FlatMap(func(e string) (string, error) {
+		return strings.ToUpper(e), gerr(e == "b")
+	}).Result().Strings()
+	suite.ElementsMatch(out, []string{"A", "C"})
 }
 
 func (suite *TestFPTestSuite) TestRepeatableGetValueMapString() {
@@ -633,22 +678,4 @@ func (suite *TestFPTestSuite) TestTickerSource() {
 	cost := time.Since(now).Milliseconds()
 	suite.Equal(3, out)
 	suite.Equal(int64(3), cost)
-}
-
-func (suite *TestFPTestSuite) TestDelaySource() {
-	source := NewDelaySource(time.Millisecond)
-	now := time.Now()
-	out := StreamOf(source).Take(3).Size()
-	cost := time.Since(now).Milliseconds()
-	suite.Equal(3, out)
-	suite.Equal(int64(3), cost)
-}
-
-func (suite *TestFPTestSuite) TestDelaySource2() {
-	source := NewDelaySource(time.Millisecond)
-	now := time.Now()
-	s := 3
-	StreamOf(source).Take(s).Foreach(func(time.Time) { time.Sleep(time.Millisecond) }).Run()
-	cost := time.Since(now).Milliseconds()
-	suite.Equal(int64(s), cost/2)
 }

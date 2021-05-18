@@ -126,6 +126,29 @@ func mapcar(fn reflect.Value, list1 *list) *list {
 	)
 }
 
+func mapOptionCar(fn reflect.Value, list1 *list) *list {
+	if isNil(list1) {
+		return list1
+	}
+	return cons(
+		func() *atom {
+			var elem *atom
+			for elem = car(list1); elem != nil; {
+				out := fn.Call([]reflect.Value{elem.val})
+				if ok := out[1].Bool(); ok {
+					return createAtom(fn.Type().Out(0), out[0])
+				}
+				list1 = cdr(list1)
+				elem = car(list1)
+			}
+			return elem
+		},
+		func() *list {
+			return mapOptionCar(fn, cdr(list1))
+		},
+	)
+}
+
 func partitoncar(size int, list1 *list) *list {
 	if isNil(list1) {
 		return list1
