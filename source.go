@@ -50,7 +50,7 @@ func makeListBySource(elemTyp reflect.Type, source Source) *list {
 		el := emptyList()
 		carfn := carOnce(func() *atom {
 			if c, ok := source.Next(); ok {
-				return createAtom(elemTyp, c)
+				return createAtom(c)
 			}
 			return nil
 		})

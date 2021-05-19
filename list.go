@@ -12,7 +12,6 @@ type list struct {
 }
 
 type atom struct {
-	typ reflect.Type
 	val reflect.Value
 }
 
@@ -45,9 +44,8 @@ func isNil(l *list) bool {
 	return l == nil
 }
 
-func createAtom(typ reflect.Type, val reflect.Value) *atom {
+func createAtom(val reflect.Value) *atom {
 	return &atom{
-		typ: typ,
 		val: val,
 	}
 }
@@ -120,7 +118,7 @@ func mapcar(fn reflect.Value, list1 *list) *list {
 			if elem == nil {
 				return nil
 			}
-			return createAtom(fn.Type().Out(0), fn.Call([]reflect.Value{elem.val})[0])
+			return createAtom(fn.Call([]reflect.Value{elem.val})[0])
 		},
 		func() *list {
 			return mapcar(fn, cdr(list1))
@@ -138,7 +136,7 @@ func mapOptionCar(fn reflect.Value, list1 *list) *list {
 			for elem = car(list1); elem != nil; {
 				out := fn.Call([]reflect.Value{elem.val})
 				if ok := out[1].Bool(); ok {
-					return createAtom(fn.Type().Out(0), out[0])
+					return createAtom(out[0])
 				}
 				list1 = cdr(list1)
 				elem = car(list1)
@@ -164,10 +162,7 @@ func partitoncar(size int, list1 *list) *list {
 				break
 			}
 			if firstPartition == nil {
-				firstPartition = &atom{
-					typ: reflect.SliceOf(elem.typ),
-					val: reflect.Zero(reflect.SliceOf(elem.typ)),
-				}
+				firstPartition = createAtom(reflect.Zero(reflect.SliceOf(elem.val.Type())))
 			}
 			firstPartition.val = reflect.Append(firstPartition.val, elem.val)
 			list1 = cdr(list1)
@@ -194,10 +189,7 @@ func partitoncarby(splitfn reflect.Value, includingSplittor bool, list1 *list) *
 				break
 			}
 			if firstPartition == nil {
-				firstPartition = &atom{
-					typ: reflect.SliceOf(elem.typ),
-					val: reflect.Zero(reflect.SliceOf(elem.typ)),
-				}
+				firstPartition = createAtom(reflect.Zero(reflect.SliceOf(elem.val.Type())))
 			}
 			isSplittor = splitfn.Call([]reflect.Value{elem.val})[0].Bool()
 			if !isSplittor || includingSplittor {
@@ -414,7 +406,7 @@ func _flattenCdrCar(cdrlist *list) (*list, *list) {
 	if elem == nil {
 		return nil, nil
 	}
-	subl := makeList(elem.typ, elem.val)
+	subl := makeList(elem.val.Type(), elem.val)
 	/* oops, this is a empty list */
 	if car(subl) == nil {
 		return _flattenCdrCar(cdr(cdrlist))

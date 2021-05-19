@@ -119,7 +119,7 @@ func (q *stream) Flatten() Stream {
 		/* well, it's not lazy enough here */
 		if l := flatten(q.list); l == nil {
 		} else if e := car(l); e != nil {
-			return newStream(e.typ, l)
+			return newStream(e.val.Type(), l)
 		}
 		return newNilStream()
 	}
@@ -141,7 +141,7 @@ func (q *stream) Prepend(v interface{}) Stream {
 	old := q.list
 	l := cons(
 		func() *atom {
-			return createAtom(typ, val)
+			return createAtom(val)
 		},
 		func() *list {
 			return old
@@ -550,7 +550,7 @@ type Value struct {
 
 func valueOfCell(e *atom) Value {
 	return Value{
-		typ: e.typ,
+		typ: e.val.Type(),
 		val: e.val,
 	}
 }
