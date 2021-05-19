@@ -59,9 +59,11 @@ func emptyList() *list {
 	}
 }
 
-func asSlice(elemTyp reflect.Type, l *list) reflect.Value {
-	typ := reflect.SliceOf(elemTyp)
-	slice := reflect.Zero(typ)
+func asSlice(elemTyp reflect.Type, slice reflect.Value, l *list) reflect.Value {
+	if !slice.IsValid() {
+		typ := reflect.SliceOf(elemTyp)
+		slice = reflect.Zero(typ)
+	}
 	processList(l, func(cell *atom) bool {
 		slice = reflect.Append(slice, cell.val)
 		return true

@@ -319,7 +319,7 @@ func (q *stream) ToSlice(dst interface{}) {
 	if val.Kind() != reflect.Ptr {
 		panic(`fp: dst must be pointer`)
 	}
-	val.Elem().Set(q.getValue())
+	val.Elem().Set(q.getValue(val.Elem()))
 }
 
 func (q *stream) GroupBy(fn interface{}) KVStream {
@@ -344,12 +344,12 @@ func (q *stream) GroupBy(fn interface{}) KVStream {
 func (q *stream) Result() Value {
 	return Value{
 		typ: reflect.SliceOf(q.expectElemTyp),
-		val: q.getValue(),
+		val: q.getValue(reflect.Value{}),
 	}
 }
 
 func (q *stream) Size() int {
-	return q.getValue().Len()
+	return q.getValue(reflect.Value{}).Len()
 }
 
 func (q *stream) Contains(e interface{}) (yes bool) {
@@ -408,12 +408,12 @@ func (q *stream) Next() (reflect.Value, bool) {
 	}
 }
 
-func (q *stream) getValue() reflect.Value {
+func (q *stream) getValue(slice reflect.Value) reflect.Value {
 	q.getValOnce.Do(func() {
 		/* let gc work */
 		tmp := q.list
 		q.list = nil
-		q.val = asSlice(q.expectElemTyp, tmp)
+		q.val = asSlice(q.expectElemTyp, slice, tmp)
 	})
 	return q.val
 }
