@@ -77,6 +77,18 @@ type Stream interface {
 	Result() Value
 }
 
+func StreamOf(arr interface{}) Stream {
+	elemTyp, list := makeListWithElemType(reflect.TypeOf(arr), reflect.ValueOf(arr))
+	return newStream(elemTyp, list)
+}
+
+func StreamOfSource(s Source) Stream {
+	if s == nil {
+		return newNilStream()
+	}
+	return newStream(s.ElemType(), makeListBySource(s))
+}
+
 var streamType = reflect.TypeOf((*Stream)(nil)).Elem()
 
 type stream struct {
@@ -156,7 +168,7 @@ func (q *stream) Append(v interface{}) Stream {
 	}
 	slice := reflect.MakeSlice(reflect.SliceOf(typ), 1, 1)
 	slice.Index(0).Set(val)
-	return newStream(q.expectElemTyp, concat(q.list, makeListBySource(typ, newSliceSource(typ, slice))))
+	return newStream(q.expectElemTyp, concat(q.list, makeListBySource(newSliceSource(typ, slice))))
 }
 
 func (q *stream) IsEmpty() bool {
@@ -243,7 +255,7 @@ func (q *stream) Union(other Stream) Stream {
 		if source.ElemType() != q.expectElemTyp {
 			panic("different stream type")
 		}
-		sourcelist = makeListBySource(source.ElemType(), source)
+		sourcelist = makeListBySource(source)
 	}
 	return newStream(q.expectElemTyp, concat(sourcelist, q.list))
 }

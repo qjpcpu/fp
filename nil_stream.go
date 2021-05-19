@@ -42,7 +42,7 @@ func (ns *nilStream) Append(v interface{}) Stream {
 	typ, val := reflect.TypeOf(v), reflect.ValueOf(v)
 	slice := reflect.MakeSlice(reflect.SliceOf(typ), 1, 1)
 	slice.Index(0).Set(val)
-	return newStream(typ, makeListBySource(typ, newSliceSource(typ, slice)))
+	return newStream(typ, makeListBySource(newSliceSource(typ, slice)))
 }
 func (ns *nilStream) Prepend(element interface{}) Stream { return ns.Append(element) }
 func (ns *nilStream) Run()                               {}
