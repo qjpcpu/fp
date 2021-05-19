@@ -52,8 +52,16 @@ type Stream interface {
 	Contains(interface{}) bool
 	// ToSource convert stream to source
 	ToSource() Source
-	// Join after another stream
-	Join(Stream) Stream
+	// Sub stream
+	Sub(other Stream) Stream
+	// Interact stream
+	Interact(other Stream) Stream
+	// Union after another stream
+	Union(Stream) Stream
+	// ToSet element as key, value is bool
+	ToSet() KVStream
+	// ToSet by func(element_type) any_type
+	ToSetBy(fn interface{}) KVStream
 	// GroupBy func(element_type) any_type, this is an aggregate op, so it would block stream
 	GroupBy(fn interface{}) KVStream
 	// Append element
@@ -221,7 +229,7 @@ func (q *stream) Uniq() Stream {
 	return newStream(elemTyp, list)
 }
 
-func (q *stream) Join(other Stream) Stream {
+func (q *stream) Union(other Stream) Stream {
 	var sourcelist *list
 	if s, ok := other.(*stream); ok {
 		if s.expectElemTyp != q.expectElemTyp {
@@ -238,6 +246,65 @@ func (q *stream) Join(other Stream) Stream {
 		sourcelist = makeListBySource(source.ElemType(), source)
 	}
 	return newStream(q.expectElemTyp, concat(sourcelist, q.list))
+}
+
+func (q *stream) Sub(other Stream) Stream {
+	if _, ok := other.(*nilStream); ok {
+		return q
+	}
+	var once sync.Once
+	var set KVStream
+	getSet := func() KVStream {
+		once.Do(func() {
+			set = other.ToSet()
+		})
+		return set
+	}
+	typ := reflect.FuncOf([]reflect.Type{q.expectElemTyp}, []reflect.Type{boolType}, false)
+	fn := reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
+		return []reflect.Value{reflect.ValueOf(getSet().Contains(in[0].Interface()))}
+	})
+	return q.Reject(fn.Interface())
+}
+
+func (q *stream) Interact(other Stream) Stream {
+	if _, ok := other.(*nilStream); ok {
+		return other
+	}
+	var once sync.Once
+	var set KVStream
+	getSet := func() KVStream {
+		once.Do(func() {
+			set = other.ToSet()
+		})
+		return set
+	}
+	typ := reflect.FuncOf([]reflect.Type{q.expectElemTyp}, []reflect.Type{boolType}, false)
+	fn := reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
+		return []reflect.Value{reflect.ValueOf(getSet().Contains(in[0].Interface()))}
+	})
+	return q.Filter(fn.Interface())
+}
+
+func (q *stream) ToSetBy(fn interface{}) KVStream {
+	fntyp := reflect.TypeOf(fn)
+	fnval := reflect.ValueOf(fn)
+	table := reflect.MakeMap(reflect.MapOf(fntyp.Out(0), q.expectElemTyp))
+	processList(q.list, func(cell *atom) bool {
+		table.SetMapIndex(fnval.Call([]reflect.Value{cell.val})[0], cell.val)
+		return true
+	})
+	return KVStreamOf(table.Interface())
+}
+
+func (q *stream) ToSet() KVStream {
+	table := reflect.MakeMap(reflect.MapOf(q.expectElemTyp, boolType))
+	_true := reflect.ValueOf(true)
+	processList(q.list, func(cell *atom) bool {
+		table.SetMapIndex(cell.val, _true)
+		return true
+	})
+	return KVStreamOf(table.Interface())
 }
 
 func (q *stream) UniqBy(fn interface{}) Stream {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -554,7 +555,7 @@ func (suite *TestFPTestSuite) TestJoinStream() {
 	q1 := StreamOf(slice1).Map(strings.ToUpper)
 	slice2 := []string{"g", "hi"}
 	q2 := StreamOf(slice2).Map(strings.ToUpper)
-	out := q2.Join(q1).Result().Strings()
+	out := q2.Union(q1).Result().Strings()
 
 	suite.Equal([]string{"ABC", "DE", "F", "G", "HI"}, out)
 }
@@ -565,7 +566,7 @@ func (suite *TestFPTestSuite) TestJoinAfterNilStream() {
 	q1 := StreamOf(slice1).Map(strings.ToUpper)
 	slice2 := []string{"a", "b"}
 	q2 := StreamOf(slice2).Map(strings.ToUpper)
-	out := q2.Join(q1).Result().Strings()
+	out := q2.Union(q1).Result().Strings()
 
 	suite.Equal([]string{"A", "B"}, out)
 }
@@ -606,10 +607,10 @@ func (suite *TestFPTestSuite) TestNilStream() {
 
 func (suite *TestFPTestSuite) TestJoinNilStream() {
 	slice := []string{"a"}
-	out := new(nilStream).Join(StreamOf(slice)).Result().Strings()
+	out := new(nilStream).Union(StreamOf(slice)).Result().Strings()
 	suite.Equal([]string{"a"}, out)
 
-	out = StreamOf(slice).Join(newNilStream()).Result().Strings()
+	out = StreamOf(slice).Union(newNilStream()).Result().Strings()
 	suite.Equal([]string{"a"}, out)
 }
 
@@ -698,4 +699,64 @@ func (suite *TestFPTestSuite) TestTickerSource() {
 	cost := time.Since(now).Milliseconds()
 	suite.Equal(3, out)
 	suite.Equal(int64(3), cost)
+}
+
+func (suite *TestFPTestSuite) TestSub() {
+	slice1 := []int{1, 2, 3, 4}
+	slice2 := []int{2, 1}
+	out := StreamOf(slice1).Sub(StreamOf(slice2)).Result().Ints()
+	suite.Equal([]int{3, 4}, out)
+
+	out = StreamOf(slice2).Sub(StreamOf(slice1)).Result().Ints()
+	suite.Nil(out)
+
+	out = StreamOf(slice2).Sub(newNilStream()).Result().Ints()
+	suite.ElementsMatch([]int{1, 2}, out)
+
+	out = newNilStream().Sub(StreamOf(slice1)).Result().Ints()
+	suite.Nil(out)
+}
+
+func (suite *TestFPTestSuite) TestInteract() {
+	slice1 := []int{1, 2, 3, 4}
+	slice2 := []int{2, 1}
+	out := StreamOf(slice1).Interact(StreamOf(slice2)).Result().Ints()
+	suite.ElementsMatch([]int{1, 2}, out)
+
+	out = StreamOf(slice2).Interact(StreamOf(slice1)).Result().Ints()
+	suite.ElementsMatch([]int{1, 2}, out)
+}
+
+func (suite *TestFPTestSuite) TestLazyCollectionOp() {
+	slice1 := []int{1, 2, 3, 4}
+	slice2 := []int{2, 1}
+	var count int
+	q := StreamOf(slice1).
+		Interact(StreamOf(slice2)).
+		Union(StreamOf([]int{5, 6, 7})).
+		Sub(StreamOf([]int{5})).
+		Prepend(10).
+		Foreach(func(int) { count++ })
+
+	suite.Zero(count)
+	out := q.Result().Ints()
+	suite.NotZero(count)
+	suite.ElementsMatch([]int{1, 2, 6, 7, 10}, out)
+}
+
+func (suite *TestFPTestSuite) TestToSet() {
+	slice := []int{1, 2, 3, 2, 1}
+	out := StreamOf(slice).ToSet().Keys().Result().Ints()
+	suite.ElementsMatch([]int{1, 2, 3}, out)
+
+	out1 := StreamOf(slice).ToSetBy(func(i int) string {
+		return strconv.FormatInt(int64(i), 10)
+	}).Keys().Result().Strings()
+	suite.ElementsMatch([]string{"1", "2", "3"}, out1)
+
+	out = StreamOf(slice).ToSetBy(func(i int) string {
+		return strconv.FormatInt(int64(i), 10)
+	}).Values().Result().Ints()
+	suite.ElementsMatch([]int{1, 2, 3}, out)
+
 }

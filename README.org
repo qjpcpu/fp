@@ -307,6 +307,27 @@ out := StreamOf(slice).Prepend("A").Result().Strings()
 suite.Equal([]string{"A", "abc", "de"}, out)
 #+end_src
 
+*** Union/Sub/Interact
+
+#+begin_src go
+slice1 := []string{"abc", "de", "f"}
+slice2 := []string{"g", "hi"}
+q1 := StreamOf(slice1).Map(strings.ToUpper)
+q2 := StreamOf(slice2).Map(strings.ToUpper)
+out := q2.Union(q1).Result().Strings()
+suite.Equal([]string{"ABC", "DE", "F", "G", "HI"}, out)
+
+slice1 := []int{1, 2, 3, 4}
+slice2 := []int{2, 1}
+out := StreamOf(slice1).Sub(StreamOf(slice2)).Result().Ints()
+suite.Equal([]int{3, 4}, out)
+
+slice1 := []int{1, 2, 3, 4}
+slice2 := []int{2, 1}
+out := StreamOf(slice1).Interact(StreamOf(slice2)).Result().Ints()
+suite.ElementsMatch([]int{1, 2}, out)
+#+end_src
+
 ** Result
 
 stream transform would not work unless Run/ToSlice/Result is invoked.

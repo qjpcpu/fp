@@ -28,11 +28,15 @@ func (ns *nilStream) SkipWhile(interface{}) Stream         { return ns }
 func (ns *nilStream) Sort() Stream                         { return ns }
 func (ns *nilStream) SortBy(fn interface{}) Stream         { return ns }
 func (ns *nilStream) Uniq() Stream                         { return ns }
+func (ns *nilStream) Sub(Stream) Stream                    { return ns }
+func (ns *nilStream) Interact(Stream) Stream               { return ns }
 func (ns *nilStream) UniqBy(fn interface{}) Stream         { return ns }
+func (ns *nilStream) ToSet() KVStream                      { return newNilKVStream() }
+func (ns *nilStream) ToSetBy(interface{}) KVStream         { return newNilKVStream() }
 func (ns *nilStream) Size() int                            { return 0 }
 func (ns *nilStream) Contains(interface{}) bool            { return false }
 func (ns *nilStream) ToSource() Source                     { return nil }
-func (ns *nilStream) Join(s Stream) Stream                 { return s }
+func (ns *nilStream) Union(s Stream) Stream                { return s }
 func (ns *nilStream) GroupBy(fn interface{}) KVStream      { return newNilKVStream() }
 func (ns *nilStream) Append(v interface{}) Stream {
 	typ, val := reflect.TypeOf(v), reflect.ValueOf(v)
