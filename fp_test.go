@@ -327,6 +327,12 @@ func (suite *TestFPTestSuite) TestUniq() {
 	suite.ElementsMatch([]int{1, 2, 3}, out)
 }
 
+func (suite *TestFPTestSuite) TestUniqKeepFirst() {
+	slice := []string{"a", "A", "B", "c", "b"}
+	out := StreamOf(slice).UniqBy(func(s string) string { return strings.ToLower(s) }).Result().Strings()
+	suite.ElementsMatch([]string{"a", "B", "c"}, out)
+}
+
 func (suite *TestFPTestSuite) TestUniqBy() {
 	slice := []int{1, 3, 2, 1, 2, 1, 3}
 	out := StreamOf(slice).UniqBy(func(i int) bool {

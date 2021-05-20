@@ -42,9 +42,9 @@ type Stream interface {
 	Sort() Stream
 	// SortBy fn stream, fn should be func(element_type,element_type) bool, this is an aggregate op, so it would block stream
 	SortBy(fn interface{}) Stream
-	// Uniq stream, this is an aggregate op, so it would block stream
+	// Uniq stream, keep first when duplicated, this is an aggregate op, so it would block stream
 	Uniq() Stream
-	// UniqBy stream, fn should be func(element_type) any_type, this is an aggregate op, so it would block stream
+	// UniqBy stream, keep first when duplicated, fn should be func(element_type) any_type, this is an aggregate op, so it would block stream
 	UniqBy(fn interface{}) Stream
 	// Size of stream, this is an aggregate op, so it would block stream
 	Size() int
