@@ -236,6 +236,49 @@ func (suite *TestFPTestSuite) TestReduce() {
 	}, out)
 }
 
+func (suite *TestFPTestSuite) TestReduce0() {
+	max := func(i, j int) int {
+		if i > j {
+			return i
+		}
+		return j
+	}
+	min := func(i, j int) int {
+		if i < j {
+			return i
+		}
+		return j
+	}
+	sum := func(i, j int) int { return i + j }
+
+	source := []int{1, 2, 3, 4, 5, 6, 7}
+	ret := StreamOf(source).Reduce0(max).Interface().(int)
+	suite.Equal(int(7), ret)
+
+	ret = StreamOf(source).Reduce0(min).Interface().(int)
+	suite.Equal(int(1), ret)
+
+	ret = StreamOf(source).Reduce0(sum).Interface().(int)
+	suite.Equal(int(28), ret)
+}
+
+func (suite *TestFPTestSuite) TestReduce0Empty() {
+	max := func(i, j int) int {
+		if i > j {
+			return i
+		}
+		return j
+	}
+
+	source := []int{1}
+	ret := StreamOf(source).Reduce0(max).Int()
+	suite.Equal(int(1), ret)
+
+	source = []int{}
+	ret = StreamOf(source).Reduce0(max).Int()
+	suite.Equal(int(0), ret)
+}
+
 func (suite *TestFPTestSuite) TestReduceChan() {
 	ch := make(chan string, 3)
 	ch <- "a"

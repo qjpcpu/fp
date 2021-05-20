@@ -174,7 +174,7 @@ suite.Equal([][]string{
 }, out)
 #+end_src
 
-*** Reduce
+*** Reduce/Reduce0
 
 #+begin_src go
 source := []string{"a", "b", "c", "d", "a", "c"}
@@ -189,6 +189,30 @@ suite.Equal(map[string]int{
 	"c": 2,
 	"d": 1,
 }, out)
+
+max := func(i, j int) int {
+	if i > j {
+		return i
+	}
+	return j
+}
+min := func(i, j int) int {
+	if i < j {
+		return i
+	}
+	return j
+}
+sum := func(i, j int) int { return i + j }
+
+source := []int{1, 2, 3, 4, 5, 6, 7}
+ret := StreamOf(source).Reduce0(max).Int()
+suite.Equal(int(7), ret)
+
+ret = StreamOf(source).Reduce0(min).Int()
+suite.Equal(int(1), ret)
+
+ret = StreamOf(source).Reduce0(sum).Int()
+suite.Equal(int(28), ret)
 #+end_src
 
 *** First

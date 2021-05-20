@@ -22,6 +22,8 @@ type Stream interface {
 	Flatten() Stream
 	// Reduce stream, fn should be func(initval_type, element_type) initval_type
 	Reduce(initval interface{}, fn interface{}) Value
+	// Reduce0 stream, fn should be func(element_type,element_type) element_type
+	Reduce0(fn interface{}) Value
 	// Partition stream, split stream into small batch
 	Partition(size int) Stream
 	// PartitionBy func(elem_type) bool
@@ -380,6 +382,14 @@ func (q *stream) Reduce(initval interface{}, fn interface{}) Value {
 	return Value{typ: typ, val: memo}
 }
 
+func (q *stream) Reduce0(fn interface{}) Value {
+	initVal := q.First().Interface()
+	if initVal == nil {
+		return Value{val: reflect.Zero(q.expectElemTyp)}
+	}
+	return newStream(q.expectElemTyp, cdr(q.list)).Reduce(initVal, fn)
+}
+
 func (q *stream) Partition(size int) Stream {
 	if size < 1 {
 		panic("batch size should be greater than 0")
@@ -571,6 +581,9 @@ type Value struct {
 }
 
 func valueOfCell(e *atom) Value {
+	if e == nil {
+		return Value{}
+	}
 	return Value{
 		typ: e.val.Type(),
 		val: e.val,
@@ -593,11 +606,6 @@ func (rv Value) Interface() interface{} {
 		return nil
 	}
 	return rv.val.Interface()
-}
-
-func (rv Value) String() (s string) {
-	rv.Result(&s)
-	return
 }
 
 func (rv Value) Strings() (s []string) {
@@ -641,6 +649,41 @@ func (rv Value) Uint64s() (s []uint64) {
 }
 
 func (rv Value) StringsList() (s [][]string) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) String() (s string) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) Int() (s int) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) Int64() (s int64) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) Int32() (s int32) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) Uint32() (s uint32) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) Uint64() (s uint64) {
+	rv.Result(&s)
+	return
+}
+
+func (rv Value) Float64() (s float64) {
 	rv.Result(&s)
 	return
 }
