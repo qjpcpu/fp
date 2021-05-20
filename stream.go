@@ -68,6 +68,8 @@ type Stream interface {
 	Append(element interface{}) Stream
 	// Prepend element
 	Prepend(element interface{}) Stream
+	// Zip stream , fn should be func(self_element_type,other_element_type) another_type
+	Zip(other Stream, fn interface{}) Stream
 
 	// Run stream and drop value
 	Run()
@@ -103,6 +105,12 @@ func (q *stream) Map(fn interface{}) Stream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	return newStream(fnTyp.Out(0), mapcar(fnVal, q.list))
+}
+
+func (q *stream) Zip(other Stream, fn interface{}) Stream {
+	fnTyp := reflect.TypeOf(fn)
+	fnVal := reflect.ValueOf(fn)
+	return newStream(fnTyp.Out(0), zipcar(fnVal, q.list, makeListBySource(other.ToSource())))
 }
 
 func (q *stream) FlatMap(fn interface{}) Stream {

@@ -328,6 +328,17 @@ out := StreamOf(slice1).Interact(StreamOf(slice2)).Result().Ints()
 suite.ElementsMatch([]int{1, 2}, out)
 #+end_src
 
+*** Zip
+
+#+begin_src go
+slice1 := []int{1, 2, 3}
+slice2 := []int{4, 5, 6, 7}
+out := StreamOf(slice1).Zip(StreamOf(slice2), func(i, j int) string {
+	return strconv.FormatInt(int64(i+j), 10)
+}).Result().Strings()
+suite.ElementsMatch([]string{"5", "7", "9"}, out)
+#+end_src
+
 ** Result
 
 stream transform would not work unless Run/ToSlice/Result is invoked.

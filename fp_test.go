@@ -714,3 +714,18 @@ func (suite *TestFPTestSuite) TestToSet() {
 	suite.ElementsMatch([]int{1, 2, 3}, out)
 
 }
+
+func (suite *TestFPTestSuite) TestZip() {
+	slice1 := []int{1, 2, 3}
+	slice2 := []int{4, 5, 6, 7}
+	out := StreamOf(slice1).Zip(StreamOf(slice2), func(i, j int) string {
+		return strconv.FormatInt(int64(i+j), 10)
+	}).Result().Strings()
+	suite.ElementsMatch([]string{"5", "7", "9"}, out)
+
+	slice2 = nil
+	out = StreamOf(slice1).Zip(StreamOf(slice2), func(i, j int) string {
+		return strconv.FormatInt(int64(i+j), 10)
+	}).Result().Strings()
+	suite.Nil(out)
+}

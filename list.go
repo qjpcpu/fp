@@ -126,6 +126,28 @@ func mapcar(fn reflect.Value, list1 *list) *list {
 	)
 }
 
+func zipcar(fn reflect.Value, list1, list2 *list) *list {
+	if isNil(list1) || isNil(list2) {
+		return nil
+	}
+	return cons(
+		func() *atom {
+			elem1 := car(list1)
+			if elem1 == nil {
+				return nil
+			}
+			elem2 := car(list2)
+			if elem2 == nil {
+				return nil
+			}
+			return createAtom(fn.Call([]reflect.Value{elem1.val, elem2.val})[0])
+		},
+		func() *list {
+			return zipcar(fn, cdr(list1), cdr(list2))
+		},
+	)
+}
+
 func mapOptionCar(fn reflect.Value, list1 *list) *list {
 	if isNil(list1) {
 		return list1

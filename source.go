@@ -39,6 +39,9 @@ func makeListWithElemType(typ reflect.Type, val reflect.Value) (reflect.Type, *l
 }
 
 func makeListBySource(source Source) *list {
+	if st, ok := source.(*stream); ok {
+		return st.list
+	}
 	if is, ok := source.(IndexSource); ok {
 		return makeListByIndexSource(is, 0)
 	}
