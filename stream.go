@@ -76,7 +76,18 @@ type Stream interface {
 	// ToSlice ptr
 	ToSlice(ptr interface{})
 	// Result of stream
-	Result() Value
+	Result() interface{}
+	// shortcuts
+	Strings() []string
+	StringsList() [][]string
+	Ints() []int
+	Float64s() []float64
+	Bytes() []byte
+	Int64s() []int64
+	Int32s() []int32
+	Uints() []uint
+	Uint32s() []uint32
+	Uint64s() []uint64
 }
 
 func StreamOf(arr interface{}) Stream {
@@ -205,7 +216,7 @@ func (q *stream) Sort() Stream {
 		elemTyp, list := makeListWithElemType(val.typ, val.val)
 		return newStream(elemTyp, list)
 	}
-	arr := q.Result().Interface()
+	arr := q.getResult().Interface()
 	v := reflect.ValueOf(arr)
 	sort.SliceStable(arr, func(i, j int) bool {
 		return q.compare(v.Index(i), v.Index(j)) < 0
@@ -334,7 +345,7 @@ func (q *stream) SortBy(fn interface{}) Stream {
 		elemTyp, list := makeListWithElemType(val.typ, val.val)
 		return newStream(elemTyp, list)
 	}
-	arr := q.Result().Interface()
+	arr := q.getResult().Interface()
 	v := reflect.ValueOf(arr)
 	fnval := reflect.ValueOf(fn)
 	sort.SliceStable(arr, func(i, j int) bool {
@@ -407,7 +418,7 @@ func (q *stream) GroupBy(fn interface{}) KVStream {
 	return KVStreamOf(table.Interface())
 }
 
-func (q *stream) Result() Value {
+func (q *stream) getResult() Value {
 	return Value{
 		typ: reflect.SliceOf(q.expectElemTyp),
 		val: q.getValue(reflect.Value{}),
@@ -540,6 +551,18 @@ func (q *stream) compare(a, b reflect.Value) int {
 	}
 	return 0
 }
+
+func (q *stream) Result() interface{}         { return q.getResult().Interface() }
+func (q *stream) Strings() (s []string)       { return q.getResult().Strings() }
+func (q *stream) Ints() (s []int)             { return q.getResult().Ints() }
+func (q *stream) Int64s() (s []int64)         { return q.getResult().Int64s() }
+func (q *stream) Int32s() (s []int32)         { return q.getResult().Int32s() }
+func (q *stream) Uints() (s []uint)           { return q.getResult().Uints() }
+func (q *stream) Uint32s() (s []uint32)       { return q.getResult().Uint32s() }
+func (q *stream) Uint64s() (s []uint64)       { return q.getResult().Uint64s() }
+func (q *stream) Bytes() (s []byte)           { return q.getResult().Bytes() }
+func (q *stream) Float64s() (s []float64)     { q.getResult().Result(&s); return }
+func (q *stream) StringsList() (s [][]string) { return q.getResult().StringsList() }
 
 /* value related */
 type Value struct {

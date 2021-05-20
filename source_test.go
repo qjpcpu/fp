@@ -30,7 +30,7 @@ func (suite *SourceTestSuite) TestLineSource() {
 	r.WriteString("second\n")
 
 	s := NewLineSource(r)
-	out := StreamOfSource(s).Map(strings.ToUpper).Result().Strings()
+	out := StreamOfSource(s).Map(strings.ToUpper).Strings()
 	suite.Equal([]string{"FIRST", "SECOND"}, out)
 
 	r = bytes.NewBuffer(nil)
@@ -55,6 +55,6 @@ func (suite *SourceTestSuite) TestFileSource() {
 	defer f.Close()
 
 	s := NewLineSource(f)
-	out := StreamOfSource(s).Map(strings.ToUpper).Result().Strings()
+	out := StreamOfSource(s).Map(strings.ToUpper).Strings()
 	suite.Equal([]string{"FIRST", "SECOND"}, out)
 }

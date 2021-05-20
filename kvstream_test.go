@@ -104,12 +104,12 @@ func (suite *KVStreamTestSuite) TestFilter() {
 		[]int{1},
 		KVStreamOf(m).Filter(func(k string, v int) bool {
 			return v == 1
-		}).Values().Result().Interface().([]int),
+		}).Values().Result().([]int),
 	)
 	suite.ElementsMatch(
 		[]int{1},
 		KVStreamOf(m).Reject(func(k string, v int) bool {
 			return v == 2
-		}).Values().Result().Interface().([]int),
+		}).Values().Result().([]int),
 	)
 }

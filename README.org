@@ -84,14 +84,14 @@ out = StreamOf(slice).FlatMap(func(e string) (string, error) {
 		return strings.ToUpper(e), errors.New("error")
 	}
 	return strings.ToUpper(e), nil
-}).Result().Strings()
+}).Strings()
 suite.ElementsMatch(out, []string{"A", "C"})
 
 // flatmap sub collection
 slice := []string{"abc", "de", "f"}
 out := StreamOf(slice).FlatMap(func(s string) []byte {
 	return []byte(s)
-}).Result().Bytes()
+}).Bytes()
 suite.Equal("abcdef", string(out))
 #+end_src
 
@@ -101,7 +101,7 @@ suite.Equal("abcdef", string(out))
 slice := []string{"a", "b", "c"}
 out := StreamOf(slice).Filter(func(s string) bool {
 	return s == "b"
-}).Result().Strings()
+}).Strings()
 suite.Equal([]string{"b"}, out)
 #+end_src
 
@@ -111,7 +111,7 @@ suite.Equal([]string{"b"}, out)
 slice := []string{"a", "b", "c"}
 out := StreamOf(slice).Reject(func(s string) bool {
 	return s == "b"
-}).Result().Strings()
+}).Strings()
 suite.Equal([]string{"a", "c"}, out)
 #+end_src
 
@@ -122,7 +122,7 @@ var out string
 slice := []string{"abc", "de", "f"}
 out1 := StreamOf(slice).Foreach(func(s string) {
 	out += s
-}).Result().Strings()
+}).Strings()
 suite.Equal("abcdef", out)
 suite.ElementsMatch(slice, out1)
 #+end_src
@@ -133,7 +133,7 @@ suite.ElementsMatch(slice, out1)
 slice := []string{"abc", "de", "f"}
 out := StreamOf(slice).Map(func(s string) []byte {
 	return []byte(s)
-}).Flatten().Result().Bytes()
+}).Flatten().Bytes()
 suite.Equal("abcdef", string(out))
 #+end_src
 
@@ -147,8 +147,8 @@ slice := [][]string{
 out := StreamOf(slice).Map(func(s []string) [][]byte {
 	return StreamOf(s).Map(func(st string) []byte {
 		return []byte(st)
-	}).Result().Interface().([][]byte)
-}).Flatten().Flatten().Result().Bytes()
+	}).Result().([][]byte)
+}).Flatten().Flatten().Bytes()
 suite.Equal("abcdefghi", string(out))
 #+end_src
 
@@ -157,7 +157,7 @@ suite.Equal("abcdefghi", string(out))
 #+begin_src go
 source := []string{"a", "b", "c", "d"}
 
-out := StreamOf(source).Partition(3).Result().StringsList()
+out := StreamOf(source).Partition(3).StringsList()
 suite.Equal([][]string{
 	{"a", "b", "c"},
 	{"d"},
@@ -166,7 +166,7 @@ suite.Equal([][]string{
 slice := []string{"a", "b", "c", "d", "e", "c", "c"}
 out := StreamOf(slice).PartitionBy(func(s string) bool {
 	return s == "c"
-}, true).Result().StringsList()
+}, true).StringsList()
 suite.Equal([][]string{
 	{"a", "b", "c"},
 	{"d", "e", "c"},
@@ -214,13 +214,13 @@ suite.Equal("abc", out.String())
 
 #+begin_src go
 slice := []string{"abc", "de", "f"}
-out := strings.Join(StreamOf(slice).Take(2).Result().Strings(), "")
+out := strings.Join(StreamOf(slice).Take(2).Strings(), "")
 suite.Equal("abcde", out)
 
 slice := []string{"a", "b", "c"}
 out := StreamOf(slice).TakeWhile(func(v string) bool {
 	return v < "c"
-}).Result().Strings()
+}).Strings()
 suite.Equal([]string{"a", "b"}, out)
 #+end_src
 
@@ -228,13 +228,13 @@ suite.Equal([]string{"a", "b"}, out)
 
 #+begin_src go
 slice := []string{"abc", "de", "f"}
-out := strings.Join(StreamOf(slice).Skip(2).Result().Strings(), "")
+out := strings.Join(StreamOf(slice).Skip(2).Strings(), "")
 suite.Equal("f", out)
 
 slice := []string{"a", "b", "c"}
 out := StreamOf(slice).SkipWhile(func(v string) bool {
 	return v < "c"
-}).Result().Strings()
+}).Strings()
 suite.Equal([]string{"c"}, out)
 #+end_src
 
@@ -242,13 +242,13 @@ suite.Equal([]string{"c"}, out)
 
 #+begin_src go
 slice := []int{1, 3, 2}
-out := StreamOf(slice).Sort().Result().Ints()
+out := StreamOf(slice).Sort().Ints()
 suite.Equal([]int{1, 2, 3}, out)
 
 slice := []string{"abc", "de", "f"}
 out := StreamOf(slice).SortBy(func(a, b string) bool {
 	return len(a) < len(b)
-}).Result().Strings()
+}).Strings()
 suite.Equal([]string{"f", "de", "abc"}, out)
 #+end_src
 
@@ -256,13 +256,13 @@ suite.Equal([]string{"f", "de", "abc"}, out)
 
 #+begin_src go
 slice := []int{1, 3, 2, 1, 2, 1, 3}
-out := StreamOf(slice).Uniq().Result().Ints()
+out := StreamOf(slice).Uniq().Ints()
 suite.ElementsMatch([]int{1, 2, 3}, out)
 
 slice := []int{1, 3, 2, 1, 2, 1, 3}
 out := StreamOf(slice).UniqBy(func(i int) bool {
 	return i%2 == 0
-}).Result().Ints()
+}).Ints()
 suite.ElementsMatch([]int{1, 2}, out)
 #+end_src
 
@@ -299,11 +299,11 @@ suite.Equal(map[int][]string{
 
 #+begin_src go
 slice := []string{"abc", "de"}
-out := StreamOf(slice).Append("A").Result().Strings()
+out := StreamOf(slice).Append("A").Strings()
 suite.Equal([]string{"abc", "de", "A"}, out)
 
 slice := []string{"abc", "de"}
-out := StreamOf(slice).Prepend("A").Result().Strings()
+out := StreamOf(slice).Prepend("A").Strings()
 suite.Equal([]string{"A", "abc", "de"}, out)
 #+end_src
 
@@ -314,17 +314,17 @@ slice1 := []string{"abc", "de", "f"}
 slice2 := []string{"g", "hi"}
 q1 := StreamOf(slice1).Map(strings.ToUpper)
 q2 := StreamOf(slice2).Map(strings.ToUpper)
-out := q2.Union(q1).Result().Strings()
+out := q2.Union(q1).Strings()
 suite.Equal([]string{"ABC", "DE", "F", "G", "HI"}, out)
 
 slice1 := []int{1, 2, 3, 4}
 slice2 := []int{2, 1}
-out := StreamOf(slice1).Sub(StreamOf(slice2)).Result().Ints()
+out := StreamOf(slice1).Sub(StreamOf(slice2)).Ints()
 suite.Equal([]int{3, 4}, out)
 
 slice1 := []int{1, 2, 3, 4}
 slice2 := []int{2, 1}
-out := StreamOf(slice1).Interact(StreamOf(slice2)).Result().Ints()
+out := StreamOf(slice1).Interact(StreamOf(slice2)).Ints()
 suite.ElementsMatch([]int{1, 2}, out)
 #+end_src
 
@@ -335,7 +335,7 @@ slice1 := []int{1, 2, 3}
 slice2 := []int{4, 5, 6, 7}
 out := StreamOf(slice1).Zip(StreamOf(slice2), func(i, j int) string {
 	return strconv.FormatInt(int64(i+j), 10)
-}).Result().Strings()
+}).Strings()
 suite.ElementsMatch([]string{"5", "7", "9"}, out)
 #+end_src
 
@@ -368,6 +368,6 @@ suite.ElementsMatch(out, []string{"A", "B", "C"})
 #+begin_src go
 slice := []string{"a", "b", "c"}
 q := StreamOf(slice).Map(strings.ToUpper)
-out := q.Result().Strings()
+out := q.Result().([]string)
 suite.ElementsMatch(out, []string{"A", "B", "C"})
 #+end_src
