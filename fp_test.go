@@ -389,39 +389,6 @@ func (suite *TestFPTestSuite) TestDeepFlatten() {
 	suite.Equal([]string{"abc", "f", "g"}, out1)
 }
 
-func (suite *TestFPTestSuite) TestDeepFlatten2() {
-	slice := [][]string{
-		{"abc", "de", "f"},
-		{"g", "hi"},
-	}
-	out := StreamOf(slice).Map(func(s []string) Stream {
-		return StreamOf(s).Map(func(st string) []byte {
-			return []byte(st)
-		})
-	}).Flatten().Flatten().Result().Bytes()
-	suite.Equal("abcdefghi", string(out))
-	var slice1 [][]string
-	out = StreamOf(slice1).Map(func(s []string) Stream {
-		return StreamOf(s).Map(func(st string) []byte {
-			return []byte(st)
-		})
-	}).Flatten().Flatten().Result().Bytes()
-	suite.Equal("", string(out))
-}
-
-func (suite *TestFPTestSuite) TestDeepFlatten3() {
-	datach := make(chan string, 1)
-	datach <- "Value2"
-	slice := []Stream{StreamOf([]string{"Value1"}), StreamOf(datach)}
-	subSource := make(chan Stream, 1)
-	subSource <- StreamOf(slice)
-	source := make(chan Stream, 1)
-	source <- StreamOf(subSource)
-
-	out := StreamOf(source).Flatten().Flatten().Flatten().Take(2).Result().Strings()
-	suite.Equal([]string{"Value1", "Value2"}, out)
-}
-
 func (suite *TestFPTestSuite) TestHybridFlatten() {
 	slice := []chan string{
 		make(chan string, 3),
@@ -599,19 +566,6 @@ func (suite *TestFPTestSuite) TestNilStream() {
 	var slice []string
 	out := StreamOf(slice).Append("a").Result().Strings()
 	suite.Equal([]string{"a"}, out)
-
-	var slice1 []Stream
-	out = StreamOf(slice1).Flatten().Append("a").Result().Strings()
-	suite.Equal([]string{"a"}, out)
-}
-
-func (suite *TestFPTestSuite) TestJoinNilStream() {
-	slice := []string{"a"}
-	out := new(nilStream).Union(StreamOf(slice)).Result().Strings()
-	suite.Equal([]string{"a"}, out)
-
-	out = StreamOf(slice).Union(newNilStream()).Result().Strings()
-	suite.Equal([]string{"a"}, out)
 }
 
 func (suite *TestFPTestSuite) TestTakeWhile() {
@@ -708,12 +662,6 @@ func (suite *TestFPTestSuite) TestSub() {
 	suite.Equal([]int{3, 4}, out)
 
 	out = StreamOf(slice2).Sub(StreamOf(slice1)).Result().Ints()
-	suite.Nil(out)
-
-	out = StreamOf(slice2).Sub(newNilStream()).Result().Ints()
-	suite.ElementsMatch([]int{1, 2}, out)
-
-	out = newNilStream().Sub(StreamOf(slice1)).Result().Ints()
 	suite.Nil(out)
 }
 

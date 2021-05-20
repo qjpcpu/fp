@@ -83,9 +83,6 @@ func StreamOf(arr interface{}) Stream {
 }
 
 func StreamOfSource(s Source) Stream {
-	if s == nil {
-		return newNilStream()
-	}
 	return newStream(s.ElemType(), makeListBySource(s))
 }
 
@@ -125,16 +122,6 @@ func (q *stream) Filter(fn interface{}) Stream {
 }
 
 func (q *stream) Flatten() Stream {
-	if q.expectElemTyp == streamType {
-		/* sadly, i can't know the detail element type cause of our lazy evaluation */
-		/* i have to car for the first element to get elem type */
-		/* well, it's not lazy enough here */
-		if l := flatten(q.list); l == nil {
-		} else if e := car(l); e != nil {
-			return newStream(e.val.Type(), l)
-		}
-		return newNilStream()
-	}
 	if kind := q.expectElemTyp.Kind(); kind != reflect.Chan && kind != reflect.Slice && kind != reflect.Array {
 		panic(q.expectElemTyp.String() + " can not be flatten")
 	}
@@ -248,8 +235,6 @@ func (q *stream) Union(other Stream) Stream {
 			panic("different stream type")
 		}
 		sourcelist = s.list
-	} else if _, ok := other.(*nilStream); ok {
-		return q
 	} else {
 		source := other.ToSource()
 		if source.ElemType() != q.expectElemTyp {
@@ -261,9 +246,6 @@ func (q *stream) Union(other Stream) Stream {
 }
 
 func (q *stream) Sub(other Stream) Stream {
-	if _, ok := other.(*nilStream); ok {
-		return q
-	}
 	var once sync.Once
 	var set KVStream
 	getSet := func() KVStream {
@@ -280,9 +262,6 @@ func (q *stream) Sub(other Stream) Stream {
 }
 
 func (q *stream) Interact(other Stream) Stream {
-	if _, ok := other.(*nilStream); ok {
-		return other
-	}
 	var once sync.Once
 	var set KVStream
 	getSet := func() KVStream {
