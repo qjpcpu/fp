@@ -94,7 +94,7 @@ type Stream interface {
 }
 
 func StreamOf(arr interface{}) Stream {
-	elemTyp, it := makeList(reflect.ValueOf(arr))
+	elemTyp, it := makeIter(reflect.ValueOf(arr))
 	return newStream(elemTyp, it)
 }
 
@@ -190,7 +190,7 @@ func (q *stream) Flatten() Stream {
 					if !ok {
 						return
 					}
-					_, innernext = makeList(inner)
+					_, innernext = makeIter(inner)
 				}
 				item, ok = innernext()
 				if !ok {
@@ -230,8 +230,10 @@ func (q *stream) Append(v interface{}) Stream {
 	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var flag int32
 		return func() (reflect.Value, bool) {
-			if val, ok := next(); ok {
-				return val, ok
+			if flag == 0 {
+				if val, ok := next(); ok {
+					return val, ok
+				}
 			}
 			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
 				return reflect.ValueOf(v), true
@@ -335,7 +337,7 @@ func (q *stream) Sort() Stream {
 		typ: reflect.TypeOf(arr),
 		val: reflect.ValueOf(arr),
 	}
-	elemTyp, list := makeList(val.val)
+	elemTyp, list := makeIter(val.val)
 	return newStream(elemTyp, list)
 }
 
@@ -356,7 +358,7 @@ func (q *stream) Uniq() Stream {
 		}
 		dup[key] = struct{}{}
 	}
-	elemTyp, list := makeList(v.val)
+	elemTyp, list := makeIter(v.val)
 	return newStream(elemTyp, list)
 }
 
@@ -454,7 +456,7 @@ func (q *stream) UniqBy(fn interface{}) Stream {
 		}
 		dup[key] = struct{}{}
 	}
-	elemTyp, list := makeList(v.val)
+	elemTyp, list := makeIter(v.val)
 	return newStream(elemTyp, list)
 }
 
@@ -469,7 +471,7 @@ func (q *stream) SortBy(fn interface{}) Stream {
 		typ: reflect.TypeOf(arr),
 		val: reflect.ValueOf(arr),
 	}
-	elemTyp, list := makeList(val.val)
+	elemTyp, list := makeIter(val.val)
 	return newStream(elemTyp, list)
 }
 

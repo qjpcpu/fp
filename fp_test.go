@@ -555,10 +555,13 @@ func (suite *TestFPTestSuite) TestGetSize() {
 	for _, ch := range slice {
 		close(ch)
 	}
-	out := StreamOf(slice).
+	q := StreamOf(slice).
 		Flatten().
-		Flatten().
-		Size()
+		Flatten()
+	out := q.Size()
+	suite.Equal(len("abcde"), out)
+	// check again
+	out = q.Size()
 	suite.Equal(len("abcde"), out)
 }
 

@@ -13,7 +13,7 @@ type Source interface {
 	Next() (reflect.Value, bool)
 }
 
-func makeList(val reflect.Value) (reflect.Type, iterator) {
+func makeIter(val reflect.Value) (reflect.Type, iterator) {
 	typ := val.Type()
 	if source, ok := val.Interface().(Source); ok && source != nil {
 		return source.ElemType(), source.Next
