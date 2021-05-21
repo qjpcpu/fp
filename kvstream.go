@@ -21,9 +21,13 @@ type KVStream interface {
 	Reject(fn interface{}) KVStream
 	// Contains key
 	Contains(key interface{}) bool
+	// Keys of map
 	Keys() Stream
+	// Values of map
 	Values() Stream
+	// Size of map
 	Size() int
+	// Result of map
 	Result() interface{}
 }
 
@@ -33,14 +37,32 @@ type kvStream struct {
 }
 
 func KVStreamOf(m interface{}) KVStream {
+	if s, ok := m.(KVSource); ok {
+		return KVStreamOfSource(s)
+	}
 	if reflect.TypeOf(m).Kind() != reflect.Map {
 		panic("argument should be map")
 	}
-	obj := newKvList()
+	obj := newKvStream()
 	tp := reflect.TypeOf(m)
 	obj.mapVal = reflect.ValueOf(m)
 	obj.keyType = tp.Key()
 	obj.valType = tp.Elem()
+	return obj
+}
+
+func KVStreamOfSource(s KVSource) KVStream {
+	obj := newKvStream()
+	obj.keyType, obj.valType = s.ElemType()
+	table := reflect.MakeMap(reflect.MapOf(obj.keyType, obj.valType))
+	for {
+		if k, v, ok := s.Next(); ok {
+			table.SetMapIndex(k, v)
+		} else {
+			break
+		}
+	}
+	obj.mapVal = table
 	return obj
 }
 
@@ -164,7 +186,7 @@ func (obj *kvStream) Size() int {
 	return obj.mapVal.Len()
 }
 
-func newKvList() *kvStream {
+func newKvStream() *kvStream {
 	return &kvStream{}
 }
 

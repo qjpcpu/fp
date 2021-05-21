@@ -13,6 +13,11 @@ type Source interface {
 	Next() (reflect.Value, bool)
 }
 
+type KVSource interface {
+	ElemType() (reflect.Type, reflect.Type)
+	Next() (reflect.Value, reflect.Value, bool)
+}
+
 func makeIter(val reflect.Value) (reflect.Type, iterator) {
 	typ := val.Type()
 	if source, ok := val.Interface().(Source); ok && source != nil {
