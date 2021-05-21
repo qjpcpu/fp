@@ -314,6 +314,14 @@ func (suite *TestFPTestSuite) TestIsEmpty() {
 	suite.Equal("abc", out.String())
 }
 
+func (suite *TestFPTestSuite) TestHasSomething() {
+	slice := []string{"abc", "de", "f"}
+	q := StreamOf(slice)
+	suite.True(q.HasSomething())
+	out := q.First()
+	suite.Equal("abc", out.String())
+}
+
 func (suite *TestFPTestSuite) TestTake() {
 	slice := []string{"abc", "de", "f"}
 	out := strings.Join(StreamOf(slice).Take(2).Strings(), "")
