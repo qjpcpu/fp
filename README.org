@@ -195,7 +195,7 @@ source := []string{"a", "b", "c", "d", "a", "c"}
 out := StreamOf(source).Reduce(map[string]int{}, func(memo map[string]int, s string) map[string]int {
 	memo[s] += 1
 	return memo
-}).Interface().(map[string]int)
+}).Result().(map[string]int)
 suite.Equal(map[string]int{
 	"a": 2,
 	"b": 1,

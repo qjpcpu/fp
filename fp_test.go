@@ -227,7 +227,7 @@ func (suite *TestFPTestSuite) TestReduce() {
 	out := StreamOf(source).Reduce(map[string]int{}, func(memo map[string]int, s string) map[string]int {
 		memo[s] += 1
 		return memo
-	}).Interface().(map[string]int)
+	}).Result().(map[string]int)
 	suite.Equal(map[string]int{
 		"a": 2,
 		"b": 1,
@@ -252,13 +252,13 @@ func (suite *TestFPTestSuite) TestReduce0() {
 	sum := func(i, j int) int { return i + j }
 
 	source := []int{1, 2, 3, 4, 5, 6, 7}
-	ret := StreamOf(source).Reduce0(max).Interface().(int)
+	ret := StreamOf(source).Reduce0(max).Result().(int)
 	suite.Equal(int(7), ret)
 
-	ret = StreamOf(source).Reduce0(min).Interface().(int)
+	ret = StreamOf(source).Reduce0(min).Result().(int)
 	suite.Equal(int(1), ret)
 
-	ret = StreamOf(source).Reduce0(sum).Interface().(int)
+	ret = StreamOf(source).Reduce0(sum).Result().(int)
 	suite.Equal(int(28), ret)
 }
 
@@ -289,7 +289,7 @@ func (suite *TestFPTestSuite) TestReduceChan() {
 	out := StreamOf(ch).Reduce(map[string]int{}, func(memo map[string]int, s string) map[string]int {
 		memo[s] += 1
 		return memo
-	}).Interface().(map[string]int)
+	}).Result().(map[string]int)
 	suite.Equal(map[string]int{
 		"a": 1,
 		"c": 2,

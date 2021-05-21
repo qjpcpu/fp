@@ -56,7 +56,7 @@ type Stream interface {
 	// Contains element
 	Contains(interface{}) bool
 	// ContainsBy func(element_type) bool
-	ContainsBy(eqfn interface{}) bool
+	ContainsBy(fn interface{}) bool
 	// ToSource convert stream to source
 	ToSource() Source
 	// Sub stream
@@ -336,7 +336,7 @@ func (q *stream) First() (f Value) {
 }
 
 func (q *stream) Sort() Stream {
-	arr := q.getResult().Interface()
+	arr := q.getResult().Result()
 	v := reflect.ValueOf(arr)
 	sort.SliceStable(arr, func(i, j int) bool {
 		return q.compare(v.Index(i), v.Index(j)) < 0
@@ -469,7 +469,7 @@ func (q *stream) UniqBy(fn interface{}) Stream {
 }
 
 func (q *stream) SortBy(fn interface{}) Stream {
-	arr := q.getResult().Interface()
+	arr := q.getResult().Result()
 	v := reflect.ValueOf(arr)
 	fnval := reflect.ValueOf(fn)
 	sort.SliceStable(arr, func(i, j int) bool {
@@ -760,7 +760,7 @@ func (q *stream) compare(a, b reflect.Value) int {
 	return 0
 }
 
-func (q *stream) Result() interface{}         { return q.getResult().Interface() }
+func (q *stream) Result() interface{}         { return q.getResult().Result() }
 func (q *stream) Strings() (s []string)       { return q.getResult().Strings() }
 func (q *stream) Ints() (s []int)             { return q.getResult().Ints() }
 func (q *stream) Int64s() (s []int64)         { return q.getResult().Int64s() }
@@ -769,7 +769,7 @@ func (q *stream) Uints() (s []uint)           { return q.getResult().Uints() }
 func (q *stream) Uint32s() (s []uint32)       { return q.getResult().Uint32s() }
 func (q *stream) Uint64s() (s []uint64)       { return q.getResult().Uint64s() }
 func (q *stream) Bytes() (s []byte)           { return q.getResult().Bytes() }
-func (q *stream) Float64s() (s []float64)     { q.getResult().Result(&s); return }
+func (q *stream) Float64s() (s []float64)     { q.getResult().To(&s); return }
 func (q *stream) StringsList() (s [][]string) { return q.getResult().StringsList() }
 
 /* value related */
@@ -778,7 +778,7 @@ type Value struct {
 	val reflect.Value
 }
 
-func (rv Value) Result(dst interface{}) {
+func (rv Value) To(dst interface{}) {
 	if !rv.val.IsValid() {
 		return
 	}
@@ -789,7 +789,7 @@ func (rv Value) Result(dst interface{}) {
 	val.Elem().Set(rv.val)
 }
 
-func (rv Value) Interface() interface{} {
+func (rv Value) Result() interface{} {
 	if !rv.val.IsValid() {
 		return nil
 	}
@@ -797,82 +797,82 @@ func (rv Value) Interface() interface{} {
 }
 
 func (rv Value) Strings() (s []string) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Bytes() (s []byte) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Ints() (s []int) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Int64s() (s []int64) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Int32s() (s []int32) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Uints() (s []uint) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Uint32s() (s []uint32) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Uint64s() (s []uint64) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) StringsList() (s [][]string) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) String() (s string) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Int() (s int) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Int64() (s int64) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Int32() (s int32) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Uint32() (s uint32) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Uint64() (s uint64) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 
 func (rv Value) Float64() (s float64) {
-	rv.Result(&s)
+	rv.To(&s)
 	return
 }
 

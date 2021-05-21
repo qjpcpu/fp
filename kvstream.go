@@ -156,7 +156,7 @@ func (l *kvStream) Result() interface{} {
 	return Value{
 		typ: l.mapVal.Type(),
 		val: l.mapVal,
-	}.Interface()
+	}.Result()
 }
 
 // Size of map
