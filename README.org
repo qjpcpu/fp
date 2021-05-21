@@ -297,12 +297,16 @@ out := StreamOf(slice).Size()
 suite.Equal(2, out)
 #+end_src
 
-*** Contains
+*** Contains/ContainsBy
 
 #+begin_src go
 slice := []string{"abc", "de", "f"}
 q := StreamOf(slice)
 suite.True(q.Contains("de"))
+
+slice := []string{"abc", "de", "f"}
+q := StreamOf(slice)
+suite.True(q.ContainsBy(func(s string) bool { return strings.ToUpper(s) == "F" }))
 #+end_src
 
 *** GroupBy

@@ -55,6 +55,8 @@ type Stream interface {
 	Size() int
 	// Contains element
 	Contains(interface{}) bool
+	// ContainsBy func(element_type) bool
+	ContainsBy(eqfn interface{}) bool
 	// ToSource convert stream to source
 	ToSource() Source
 	// Sub stream
@@ -629,6 +631,15 @@ func (q *stream) Contains(e interface{}) (yes bool) {
 
 	q.iter = repeatableIter(q.iter, func(v reflect.Value) bool {
 		yes = eq(v)
+		return !yes
+	})
+	return
+}
+
+func (q *stream) ContainsBy(eqfn interface{}) (yes bool) {
+	fnval := reflect.ValueOf(eqfn)
+	q.iter = repeatableIter(q.iter, func(v reflect.Value) bool {
+		yes = fnval.Call([]reflect.Value{v})[0].Bool()
 		return !yes
 	})
 	return

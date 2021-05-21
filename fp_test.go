@@ -372,6 +372,15 @@ func (suite *TestFPTestSuite) TestContains() {
 	suite.Equal([]string{"ABC", "DE", "F"}, q.Map(func(s *string) string { return strings.ToUpper(*s) }).Strings())
 }
 
+func (suite *TestFPTestSuite) TestContainsBy() {
+	slice := []string{"abc", "de", "f"}
+	q := StreamOf(slice)
+	suite.True(q.ContainsBy(func(s string) bool { return strings.ToUpper(s) == "F" }))
+	suite.False(q.ContainsBy(func(s string) bool { return s == "e" }))
+	suite.False(q.ContainsBy(func(s string) bool { return s == "F" }))
+	suite.Equal([]string{"ABC", "DE", "F"}, q.Map(strings.ToUpper).Strings())
+}
+
 func (suite *TestFPTestSuite) TestUniq() {
 	slice := []int{1, 3, 2, 1, 2, 1, 3}
 	out := StreamOf(slice).Uniq().Ints()
