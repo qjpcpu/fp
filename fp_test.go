@@ -187,6 +187,19 @@ func (suite *TestFPTestSuite) TestForeach() {
 	suite.ElementsMatch(slice, out1)
 }
 
+func (suite *TestFPTestSuite) TestForeachWithIndex() {
+	var out string
+	slice := []string{"abc", "de", "f"}
+	var indics []int
+	out1 := StreamOf(slice).Foreach(func(s string, i int) {
+		out += s
+		indics = append(indics, i)
+	}).Strings()
+	suite.Equal("abcdef", out)
+	suite.ElementsMatch(slice, out1)
+	suite.ElementsMatch([]int{0, 1, 2}, indics)
+}
+
 func (suite *TestFPTestSuite) TestReadFirst() {
 	slice := []string{"abc", "de", "f"}
 	q := StreamOf(slice)

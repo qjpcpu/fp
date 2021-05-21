@@ -17,7 +17,7 @@ type Stream interface {
 	Filter(fn interface{}) Stream
 	// Reject stream, fn should be func(element_type) bool
 	Reject(fn interface{}) Stream
-	// Foreach stream element, fn should be func(element_type)
+	// Foreach stream element, fn should be func(element_type,optional[int])
 	Foreach(fn interface{}) Stream
 	// Flatten stream, element should be flatten-able
 	Flatten() Stream
@@ -208,10 +208,17 @@ func (q *stream) Flatten() Stream {
 
 func (q *stream) Foreach(fn interface{}) Stream {
 	fnval := reflect.ValueOf(fn)
+	withIndex := fnval.Type().NumIn() == 2
 	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+		var i int
 		return func() (val reflect.Value, ok bool) {
 			if val, ok = next(); ok {
-				fnval.Call([]reflect.Value{val})
+				if withIndex {
+					fnval.Call([]reflect.Value{val, reflect.ValueOf(i)})
+					i++
+				} else {
+					fnval.Call([]reflect.Value{val})
+				}
 			}
 			return
 		}
