@@ -13,73 +13,20 @@ type Source interface {
 	Next() (reflect.Value, bool)
 }
 
-type IndexSource interface {
-	Source
-	Index(int) (reflect.Value, bool)
-}
-
-func makeList(typ reflect.Type, val reflect.Value) *list {
-	_, l := makeListWithElemType(typ, val)
-	return l
-}
-
-func makeListWithElemType(typ reflect.Type, val reflect.Value) (reflect.Type, *list) {
+func makeList(val reflect.Value) (reflect.Type, iterator) {
+	typ := val.Type()
 	if source, ok := val.Interface().(Source); ok && source != nil {
-		return source.ElemType(), makeListBySource(source)
+		return source.ElemType(), source.Next
 	}
 	switch typ.Kind() {
 	case reflect.Slice, reflect.Array:
 		source := newSliceSource(typ.Elem(), val)
-		return source.ElemType(), makeListBySource(source)
+		return source.ElemType(), source.Next
 	case reflect.Chan:
 		source := newChannelSource(typ.Elem(), val)
-		return source.ElemType(), makeListBySource(source)
+		return source.ElemType(), source.Next
 	}
 	panic("not support " + typ.String())
-}
-
-func makeListBySource(source Source) *list {
-	if st, ok := source.(*stream); ok {
-		return st.list
-	}
-	if is, ok := source.(IndexSource); ok {
-		return makeListByIndexSource(is, 0)
-	}
-	if source != nil {
-		el := emptyList()
-		carfn := carOnce(func() *atom {
-			if c, ok := source.Next(); ok {
-				return createAtom(c)
-			}
-			return nil
-		})
-		el.elem = carfn
-
-		el.next = cdrOnce(func() *list {
-			_ = carfn()
-			return makeListBySource(source)
-		})
-		return el
-	}
-	return nil
-}
-
-func makeListByIndexSource(source IndexSource, index int) *list {
-	if source != nil {
-		el := emptyList()
-		el.elem = func() *atom {
-			if c, ok := source.Index(index); ok {
-				return createAtom(c)
-			}
-			return nil
-		}
-
-		el.next = func() *list {
-			return makeListByIndexSource(source, index+1)
-		}
-		return el
-	}
-	return nil
 }
 
 /* slice stream */
@@ -105,13 +52,6 @@ func (ss *sliceSource) Next() (reflect.Value, bool) {
 	offset := ss.offset
 	ss.offset++
 	return ss.arr.Index(offset), true
-}
-
-func (ss *sliceSource) Index(i int) (reflect.Value, bool) {
-	if i >= ss.arr.Len() {
-		return reflect.Value{}, false
-	}
-	return ss.arr.Index(i), true
 }
 
 /* channel stream */

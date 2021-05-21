@@ -674,7 +674,6 @@ func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor() {
 	suite.Equal([][]string{
 		{"a", "b"},
 		{"d", "e"},
-		nil,
 	}, out)
 }
 
