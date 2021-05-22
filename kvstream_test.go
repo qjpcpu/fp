@@ -2,7 +2,6 @@ package fp
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -59,40 +58,15 @@ func (suite *KVStreamTestSuite) TestMap() {
 	suite.Equal("b", vk[2])
 }
 
-func (suite *KVStreamTestSuite) TestMapValue() {
+func (suite *KVStreamTestSuite) TestFlatMap() {
 	m := map[string]int{
 		"a": 1,
 		"b": 2,
 	}
-	vk := KVStreamOf(m).MapValue(func(k string, v int) string {
-		return k
-	}).Result().(map[string]string)
-	suite.Equal("a", vk["a"])
-	suite.Equal("b", vk["b"])
-
-	vk = KVStreamOf(m).MapValue(func(v int) string {
-		return fmt.Sprint(v)
-	}).Result().(map[string]string)
-	suite.Equal("1", vk["a"])
-	suite.Equal("2", vk["b"])
-}
-
-func (suite *KVStreamTestSuite) TestMapKey() {
-	m := map[string]int{
-		"a": 1,
-		"b": 2,
-	}
-	vk := KVStreamOf(m).MapKey(func(k string) string {
-		return strings.ToUpper(k)
-	}).Result().(map[string]int)
-	suite.Equal(1, vk["A"])
-	suite.Equal(2, vk["B"])
-
-	vk = KVStreamOf(m).MapKey(func(k string, v int) string {
-		return strings.ToUpper(k)
-	}).Result().(map[string]int)
-	suite.Equal(1, vk["A"])
-	suite.Equal(2, vk["B"])
+	vk := KVStreamOf(m).FlatMap(func(k string, v int) string {
+		return fmt.Sprintf("%v-%v", k, v)
+	}).Strings()
+	suite.ElementsMatch([]string{"a-1", "b-2"}, vk)
 }
 
 func (suite *KVStreamTestSuite) TestFilter() {
