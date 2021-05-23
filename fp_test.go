@@ -356,6 +356,33 @@ func (suite *TestFPTestSuite) TestSkip() {
 	suite.Equal("", out)
 }
 
+func (suite *TestFPTestSuite) TestPageRange() {
+	slice := []string{"abc", "de", "f", "g", "i"}
+	out := StreamOf(slice).Skip(1).Take(2).Strings()
+	suite.Equal([]string{"de", "f"}, out)
+
+	out = StreamOf(slice).Skip(0).Take(2).Strings()
+	suite.Equal([]string{"abc", "de"}, out)
+
+	out = StreamOf(slice).Skip(0).Take(0).Strings()
+	suite.Nil(out)
+
+	out = StreamOf(slice).SkipWhile(func(s string) bool {
+		return s == ""
+	}).Take(2).Strings()
+	suite.Equal([]string{"abc", "de"}, out)
+
+	out = StreamOf(slice).SkipWhile(func(s string) bool {
+		return s == "abc"
+	}).Take(2).Strings()
+	suite.Equal([]string{"de", "f"}, out)
+
+	out = StreamOf(slice).TakeWhile(func(s string) bool {
+		return s == "abc"
+	}).Take(2).Strings()
+	suite.Equal([]string{"abc"}, out)
+}
+
 func (suite *TestFPTestSuite) TestSort() {
 	slice := []int{1, 3, 2}
 	out := StreamOf(slice).Sort().Ints()
