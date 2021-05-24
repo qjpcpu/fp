@@ -102,14 +102,8 @@ func StreamOf(arr interface{}) Stream {
 	return newStream(elemTyp, it)
 }
 
-/* oo style */
 func StreamOfSource(s Source) Stream {
 	return newStream(s.ElemType(), s.Next)
-}
-
-/* fp style */
-func StreamOfFunc(elemTyp reflect.Type, iterator func() (reflect.Value, bool)) Stream {
-	return newStream(elemTyp, iterator)
 }
 
 type stream struct {

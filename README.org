@@ -49,6 +49,17 @@ ch := make(chan string, 1)
 StreamOf(ch)
 #+end_src
 
+e.g. create stream from iterator function
+
+#+begin_src go
+var i int
+fn := func() (int, bool) {
+	i++
+	return i, i < 5
+}
+StreamOf(fn)
+#+end_src
+
 e.g. create stream from custom source
 
 #+begin_src go

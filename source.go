@@ -23,6 +23,12 @@ func makeIter(val reflect.Value) (reflect.Type, iterator) {
 	if source, ok := val.Interface().(Source); ok && source != nil {
 		return source.ElemType(), source.Next
 	}
+	if isIterFunction(val) {
+		return val.Type().Out(0), func() (reflect.Value, bool) {
+			out := val.Call(nil)
+			return out[0], out[1].Bool()
+		}
+	}
 	switch typ.Kind() {
 	case reflect.Slice, reflect.Array:
 		source := newSliceSource(typ.Elem(), val)
@@ -32,6 +38,11 @@ func makeIter(val reflect.Value) (reflect.Type, iterator) {
 		return source.ElemType(), source.Next
 	}
 	panic("not support " + typ.String())
+}
+
+func isIterFunction(fn reflect.Value) bool {
+	typ := fn.Type()
+	return typ.Kind() == reflect.Func && typ.NumIn() == 0 && typ.NumOut() == 2 && typ.Out(1) == boolType
 }
 
 /* slice stream */

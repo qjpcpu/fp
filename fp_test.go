@@ -857,3 +857,21 @@ func (suite *TestFPTestSuite) TestFullLazy() {
 	q.Result()
 	suite.NotZero(count)
 }
+
+func (suite *TestFPTestSuite) TestStreamOfFunction() {
+	var i int
+	fn := func() (int, bool) {
+		i++
+		return i, i < 5
+	}
+	out := StreamOf(fn).Ints()
+	suite.Equal([]int{1, 2, 3, 4}, out)
+
+	i = 0
+	fn1 := func() (interface{}, bool) {
+		i++
+		return i, i < 5
+	}
+	out1 := StreamOf(fn1).Result().([]interface{})
+	suite.Equal([]interface{}{1, 2, 3, 4}, out1)
+}
