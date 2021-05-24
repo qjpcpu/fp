@@ -2,6 +2,7 @@ package fp
 
 import (
 	"reflect"
+	"sync/atomic"
 )
 
 type KVStream interface {
@@ -30,7 +31,7 @@ type KVStream interface {
 }
 
 type kvStream struct {
-	mapVal           reflect.Value
+	getMap           func() reflect.Value
 	keyType, valType reflect.Type
 }
 
@@ -41,91 +42,102 @@ func KVStreamOf(m interface{}) KVStream {
 	if reflect.TypeOf(m).Kind() != reflect.Map {
 		panic("argument should be map")
 	}
-	obj := newKvStream()
 	tp := reflect.TypeOf(m)
-	obj.mapVal = reflect.ValueOf(m)
-	obj.keyType = tp.Key()
-	obj.valType = tp.Elem()
-	return obj
+	return newKvStream(tp.Key(), tp.Elem(), func() reflect.Value {
+		return reflect.ValueOf(m)
+	})
 }
 
 func KVStreamOfSource(s KVSource) KVStream {
-	obj := newKvStream()
-	obj.keyType, obj.valType = s.ElemType()
-	table := reflect.MakeMap(reflect.MapOf(obj.keyType, obj.valType))
-	for {
-		if k, v, ok := s.Next(); ok {
-			table.SetMapIndex(k, v)
-		} else {
-			break
+	keyType, valType := s.ElemType()
+	return newKvStream(keyType, valType, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(keyType, valType))
+		for {
+			if k, v, ok := s.Next(); ok {
+				table.SetMapIndex(k, v)
+			} else {
+				break
+			}
 		}
-	}
-	obj.mapVal = table
-	return obj
+		return table
+	})
 }
 
 func (obj *kvStream) Foreach(fn interface{}) KVStream {
 	fnVal := reflect.ValueOf(fn)
-	iter := obj.mapVal.MapRange()
-	for iter.Next() {
-		fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
-	}
-	return obj
+	getMap := obj.getMap
+	return newKvStream(obj.keyType, obj.valType, func() reflect.Value {
+		mp := getMap()
+		iter := mp.MapRange()
+		for iter.Next() {
+			fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
+		}
+		return mp
+	})
 }
 
 func (obj *kvStream) Map(fn interface{}) KVStream {
+	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
-	iter := obj.mapVal.MapRange()
-	keyTp, valTp := obj.parseMapFunction(fn)
-	table := reflect.MakeMap(reflect.MapOf(keyTp, valTp))
-	for iter.Next() {
-		out := fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
-		table.SetMapIndex(out[0], out[1])
-	}
-	return KVStreamOf(table.Interface())
+	getMap := obj.getMap
+	return newKvStream(fnTyp.Out(0), fnTyp.Out(1), func() reflect.Value {
+		iter := getMap().MapRange()
+		table := reflect.MakeMap(reflect.MapOf(fnTyp.Out(0), fnTyp.Out(1)))
+		for iter.Next() {
+			out := fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
+			table.SetMapIndex(out[0], out[1])
+		}
+		return table
+	})
 }
 
 func (obj *kvStream) FlatMap(fn interface{}) Stream {
 	fnVal := reflect.ValueOf(fn)
-	slice := reflect.MakeSlice(reflect.SliceOf(fnVal.Type().Out(0)), 0, obj.Size())
-	iter := obj.mapVal.MapRange()
-	for iter.Next() {
-		out := fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})[0]
-		slice = reflect.Append(slice, out)
-	}
-	return StreamOf(slice.Interface())
+	var iter *reflect.MapIter
+	var done bool
+	return newStream(fnVal.Type().Out(0), func() (reflect.Value, bool) {
+		if iter == nil {
+			iter = obj.getMap().MapRange()
+		}
+		if !done && iter.Next() {
+			out := fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
+			return out[0], true
+		}
+		done = true
+		return reflect.Value{}, false
+	})
 }
 
 // Filter kv pair
 func (obj *kvStream) Filter(fn interface{}) KVStream {
 	fnVal := reflect.ValueOf(fn)
-	obj.parseFilterFunction(fn)
-
-	table := reflect.MakeMap(obj.mapVal.Type())
-	iter := obj.mapVal.MapRange()
-	for iter.Next() {
-		k, v := iter.Key(), iter.Value()
-		if ok := fnVal.Call([]reflect.Value{k, v})[0].Bool(); ok {
-			table.SetMapIndex(k, v)
+	return newKvStream(obj.keyType, obj.valType, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(obj.keyType, obj.valType))
+		iter := obj.getMap().MapRange()
+		for iter.Next() {
+			k, v := iter.Key(), iter.Value()
+			if ok := fnVal.Call([]reflect.Value{k, v})[0].Bool(); ok {
+				table.SetMapIndex(k, v)
+			}
 		}
-	}
-	return KVStreamOf(table.Interface())
+		return table
+	})
 }
 
 // Reject kv pair
 func (obj *kvStream) Reject(fn interface{}) KVStream {
 	fnVal := reflect.ValueOf(fn)
-	obj.parseFilterFunction(fn)
-
-	table := reflect.MakeMap(obj.mapVal.Type())
-	iter := obj.mapVal.MapRange()
-	for iter.Next() {
-		k, v := iter.Key(), iter.Value()
-		if ok := fnVal.Call([]reflect.Value{k, v})[0].Bool(); !ok {
-			table.SetMapIndex(k, v)
+	return newKvStream(obj.keyType, obj.valType, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(obj.keyType, obj.valType))
+		iter := obj.getMap().MapRange()
+		for iter.Next() {
+			k, v := iter.Key(), iter.Value()
+			if ok := fnVal.Call([]reflect.Value{k, v})[0].Bool(); !ok {
+				table.SetMapIndex(k, v)
+			}
 		}
-	}
-	return KVStreamOf(table.Interface())
+		return table
+	})
 }
 
 // Contains key
@@ -134,7 +146,7 @@ func (obj *kvStream) Contains(key interface{}) bool {
 	if kval.Type() != obj.keyType && kval.Type().ConvertibleTo(obj.keyType) {
 		kval = kval.Convert(obj.keyType)
 	}
-	if ele := obj.mapVal.MapIndex(kval); !ele.IsValid() {
+	if ele := obj.getMap().MapIndex(kval); !ele.IsValid() {
 		return false
 	}
 	return true
@@ -142,66 +154,59 @@ func (obj *kvStream) Contains(key interface{}) bool {
 
 // Keys of object
 func (obj *kvStream) Keys() Stream {
-	keys := obj.mapVal.MapKeys()
-	slice := reflect.MakeSlice(reflect.SliceOf(obj.keyType), len(keys), len(keys))
-	for i := 0; i < len(keys); i++ {
-		slice.Index(i).Set(keys[i])
-	}
-	return StreamOf(slice.Interface())
+	var iter *reflect.MapIter
+	var done bool
+	return newStream(obj.keyType, func() (reflect.Value, bool) {
+		if iter == nil {
+			iter = obj.getMap().MapRange()
+		}
+		if !done && iter.Next() {
+			return iter.Key(), true
+		}
+		done = true
+		return reflect.Value{}, false
+	})
 }
 
 // Values of object
 func (obj *kvStream) Values() Stream {
-	keys := obj.mapVal.MapKeys()
-	slice := reflect.MakeSlice(reflect.SliceOf(obj.valType), len(keys), len(keys))
-	for i := 0; i < len(keys); i++ {
-		slice.Index(i).Set(obj.mapVal.MapIndex(keys[i]))
-	}
-	return StreamOf(slice.Interface())
+	var iter *reflect.MapIter
+	var done bool
+	return newStream(obj.valType, func() (reflect.Value, bool) {
+		if iter == nil {
+			iter = obj.getMap().MapRange()
+		}
+		if !done && iter.Next() {
+			return iter.Value(), true
+		}
+		done = true
+		return reflect.Value{}, false
+	})
 }
 
 func (l *kvStream) Result() interface{} {
 	return Value{
-		typ: l.mapVal.Type(),
-		val: l.mapVal,
+		typ: reflect.MapOf(l.keyType, l.valType),
+		val: l.getMap(),
 	}.Result()
 }
 
 // Size of map
 func (obj *kvStream) Size() int {
-	return obj.mapVal.Len()
+	return obj.getMap().Len()
 }
 
-func newKvStream() *kvStream {
-	return &kvStream{}
+func newKvStream(k, v reflect.Type, getmp func() reflect.Value) *kvStream {
+	return &kvStream{keyType: k, valType: v, getMap: getMapOnce(getmp)}
 }
 
-func (obj *kvStream) parseMapFunction(fn interface{}) (keytyp reflect.Type, valTyp reflect.Type) {
-	tp := reflect.TypeOf(fn)
-	if tp.Kind() != reflect.Func {
-		panic("should be function")
-	}
-	if tp.NumIn() != 2 || tp.NumOut() != 2 {
-		panic("map function should be 2 intput 2 output")
-	}
-	if tp.In(0) != obj.keyType || tp.In(1) != obj.valType {
-		panic("map function input/output shoule match")
-	}
-	return tp.Out(0), tp.Out(1)
-}
-
-func (obj *kvStream) parseFilterFunction(fn interface{}) {
-	tp := reflect.TypeOf(fn)
-	if tp.Kind() != reflect.Func {
-		panic("should be function")
-	}
-	if tp.NumIn() != 2 || tp.NumOut() != 1 {
-		panic("filter function should be 2 intput 2 output")
-	}
-	if tp.In(0) != obj.keyType || tp.In(1) != obj.valType {
-		panic("filter function input/output shoule match")
-	}
-	if tp.Out(0).Kind() != reflect.Bool {
-		panic("filter function output shoule be boolean")
+func getMapOnce(f func() reflect.Value) func() reflect.Value {
+	var flag int32
+	var v reflect.Value
+	return func() reflect.Value {
+		if atomic.CompareAndSwapInt32(&flag, 0, 1) {
+			v = f()
+		}
+		return v
 	}
 }

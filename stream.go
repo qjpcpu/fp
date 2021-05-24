@@ -343,38 +343,48 @@ func (q *stream) First() (f Value) {
 }
 
 func (q *stream) Sort() Stream {
-	arr := q.getResult().Result()
-	v := reflect.ValueOf(arr)
-	sort.SliceStable(arr, func(i, j int) bool {
-		return q.compare(v.Index(i), v.Index(j)) < 0
+	var iter iterator
+	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+		if iter == nil {
+			arr := q.getResult().Result()
+			v := reflect.ValueOf(arr)
+			sort.SliceStable(arr, func(i, j int) bool {
+				return q.compare(v.Index(i), v.Index(j)) < 0
+			})
+			val := Value{
+				typ: reflect.TypeOf(arr),
+				val: reflect.ValueOf(arr),
+			}
+			_, iter = makeIter(val.val)
+		}
+		return iter()
 	})
-	val := Value{
-		typ: reflect.TypeOf(arr),
-		val: reflect.ValueOf(arr),
-	}
-	elemTyp, list := makeIter(val.val)
-	return newStream(elemTyp, list)
 }
 
 func (q *stream) Uniq() Stream {
-	v := Value{
-		typ: reflect.SliceOf(q.expectElemTyp),
-		val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
-	}
-	dup := make(map[interface{}]struct{})
-	for {
-		val, ok := q.iter()
-		if !ok {
-			break
+	var iter iterator
+	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+		if iter == nil {
+			v := Value{
+				typ: reflect.SliceOf(q.expectElemTyp),
+				val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
+			}
+			dup := make(map[interface{}]struct{})
+			for {
+				val, ok := q.iter()
+				if !ok {
+					break
+				}
+				key := val.Interface()
+				if _, ok := dup[key]; !ok {
+					v.val = reflect.Append(v.val, val)
+				}
+				dup[key] = struct{}{}
+			}
+			_, iter = makeIter(v.val)
 		}
-		key := val.Interface()
-		if _, ok := dup[key]; !ok {
-			v.val = reflect.Append(v.val, val)
-		}
-		dup[key] = struct{}{}
-	}
-	elemTyp, list := makeIter(v.val)
-	return newStream(elemTyp, list)
+		return iter()
+	})
 }
 
 func (q *stream) Union(other Stream) Stream {
@@ -429,65 +439,82 @@ func (q *stream) Interact(other Stream) Stream {
 func (q *stream) ToSetBy(fn interface{}) KVStream {
 	fntyp := reflect.TypeOf(fn)
 	fnval := reflect.ValueOf(fn)
-	table := reflect.MakeMap(reflect.MapOf(fntyp.Out(0), q.expectElemTyp))
-	for {
-		val, ok := q.iter()
-		if !ok {
-			break
+
+	iter := q.iter
+	return newKvStream(fntyp.Out(0), q.expectElemTyp, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(fntyp.Out(0), q.expectElemTyp))
+		for {
+			val, ok := iter()
+			if !ok {
+				break
+			}
+			table.SetMapIndex(fnval.Call([]reflect.Value{val})[0], val)
 		}
-		table.SetMapIndex(fnval.Call([]reflect.Value{val})[0], val)
-	}
-	return KVStreamOf(table.Interface())
+		return table
+	})
 }
 
 func (q *stream) ToSet() KVStream {
-	table := reflect.MakeMap(reflect.MapOf(q.expectElemTyp, boolType))
-	_true := reflect.ValueOf(true)
-	for {
-		val, ok := q.iter()
-		if !ok {
-			break
+	iter := q.iter
+	return newKvStream(q.expectElemTyp, boolType, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(q.expectElemTyp, boolType))
+		_true := reflect.ValueOf(true)
+		for {
+			val, ok := iter()
+			if !ok {
+				break
+			}
+			table.SetMapIndex(val, _true)
 		}
-		table.SetMapIndex(val, _true)
-	}
-	return KVStreamOf(table.Interface())
+		return table
+	})
 }
 
 func (q *stream) UniqBy(fn interface{}) Stream {
-	v := Value{
-		typ: reflect.SliceOf(q.expectElemTyp),
-		val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
-	}
-	getKey := reflect.ValueOf(fn)
-	dup := make(map[interface{}]struct{})
-	for {
-		val, ok := q.iter()
-		if !ok {
-			break
+	var iter iterator
+	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+		if iter == nil {
+			v := Value{
+				typ: reflect.SliceOf(q.expectElemTyp),
+				val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
+			}
+			getKey := reflect.ValueOf(fn)
+			dup := make(map[interface{}]struct{})
+			for {
+				val, ok := q.iter()
+				if !ok {
+					break
+				}
+				key := getKey.Call([]reflect.Value{val})[0].Interface()
+				if _, ok := dup[key]; !ok {
+					v.val = reflect.Append(v.val, val)
+				}
+				dup[key] = struct{}{}
+			}
+			_, iter = makeIter(v.val)
 		}
-		key := getKey.Call([]reflect.Value{val})[0].Interface()
-		if _, ok := dup[key]; !ok {
-			v.val = reflect.Append(v.val, val)
-		}
-		dup[key] = struct{}{}
-	}
-	elemTyp, list := makeIter(v.val)
-	return newStream(elemTyp, list)
+		return iter()
+	})
 }
 
 func (q *stream) SortBy(fn interface{}) Stream {
-	arr := q.getResult().Result()
-	v := reflect.ValueOf(arr)
-	fnval := reflect.ValueOf(fn)
-	sort.SliceStable(arr, func(i, j int) bool {
-		return fnval.Call([]reflect.Value{v.Index(i), v.Index(j)})[0].Bool()
+	var iter iterator
+	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+		if iter == nil {
+			arr := q.getResult().Result()
+			v := reflect.ValueOf(arr)
+			fnval := reflect.ValueOf(fn)
+			sort.SliceStable(arr, func(i, j int) bool {
+				return fnval.Call([]reflect.Value{v.Index(i), v.Index(j)})[0].Bool()
+			})
+			val := Value{
+				typ: reflect.TypeOf(arr),
+				val: reflect.ValueOf(arr),
+			}
+			_, iter = makeIter(val.val)
+		}
+		return iter()
 	})
-	val := Value{
-		typ: reflect.TypeOf(arr),
-		val: reflect.ValueOf(arr),
-	}
-	elemTyp, list := makeIter(val.val)
-	return newStream(elemTyp, list)
 }
 
 func (q *stream) Reject(fn interface{}) Stream {
@@ -583,23 +610,26 @@ func (q *stream) ToSlice(dst interface{}) {
 func (q *stream) GroupBy(fn interface{}) KVStream {
 	keyTyp := reflect.TypeOf(fn).Out(0)
 	valTyp := reflect.SliceOf(q.expectElemTyp)
-	table := reflect.MakeMap(reflect.MapOf(keyTyp, valTyp))
 
-	fnVal := reflect.ValueOf(fn)
-	for {
-		val, ok := q.iter()
-		if !ok {
-			break
+	iter := q.iter
+	return newKvStream(keyTyp, valTyp, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(keyTyp, valTyp))
+		fnVal := reflect.ValueOf(fn)
+		for {
+			val, ok := iter()
+			if !ok {
+				break
+			}
+			key := fnVal.Call([]reflect.Value{val})[0]
+			slice := table.MapIndex(key)
+			if !slice.IsValid() {
+				slice = reflect.Zero(valTyp)
+			}
+			slice = reflect.Append(slice, val)
+			table.SetMapIndex(key, slice)
 		}
-		key := fnVal.Call([]reflect.Value{val})[0]
-		slice := table.MapIndex(key)
-		if !slice.IsValid() {
-			slice = reflect.Zero(valTyp)
-		}
-		slice = reflect.Append(slice, val)
-		table.SetMapIndex(key, slice)
-	}
-	return KVStreamOf(table.Interface())
+		return table
+	})
 }
 
 func (q *stream) getResult() Value {

@@ -827,3 +827,33 @@ func (suite *TestFPTestSuite) TestZip() {
 	}).Strings()
 	suite.Nil(out)
 }
+
+func (suite *TestFPTestSuite) TestFullLazy() {
+	var count int
+	q := StreamOf([]int{1, 2, 3, 4}).Map(func(i int) int {
+		count++
+		return i
+	}).FlatMap(func(i int) (int, bool) {
+		count++
+		return i, true
+	}).ToSetBy(func(i int) int {
+		count++
+		return i
+	}).Foreach(func(i, j int) {
+		count++
+	}).Filter(func(i, j int) bool {
+		count++
+		return true
+	}).Values().Filter(func(i int) bool {
+		count++
+		return true
+	}).Foreach(func(i int) {
+		count++
+	}).GroupBy(func(i int) int {
+		count++
+		return i
+	}).Values().Flatten()
+	suite.Zero(count)
+	q.Result()
+	suite.NotZero(count)
+}

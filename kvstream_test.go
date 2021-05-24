@@ -28,7 +28,7 @@ func (suite *KVStreamTestSuite) TestForeach() {
 	KVStreamOf(m).Foreach(func(key string, val int) {
 		keys = append(keys, key)
 		vals = append(vals, val)
-	})
+	}).Result()
 	suite.ElementsMatch([]string{"a", "b"}, keys)
 	suite.ElementsMatch([]int{1, 2}, vals)
 }
