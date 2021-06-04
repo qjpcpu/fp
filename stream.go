@@ -63,7 +63,7 @@ type Stream interface {
 	Sub(other Stream) Stream
 	// Interact stream
 	Interact(other Stream) Stream
-	// Union after another stream
+	// Union append another stream
 	Union(Stream) Stream
 	// ToSet element as key, value is bool
 	ToSet() KVStream
@@ -393,13 +393,13 @@ func (q *stream) Union(other Stream) Stream {
 		var otherDone bool
 		return func() (reflect.Value, bool) {
 			if !otherDone {
-				val, ok := oNext()
+				val, ok := next()
 				if ok {
 					return val, true
 				}
 				otherDone = true
 			}
-			return next()
+			return oNext()
 		}
 	})
 }

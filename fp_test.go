@@ -629,7 +629,7 @@ func (suite *TestFPTestSuite) TestJoinStream() {
 	q2 := StreamOf(slice2).Map(strings.ToUpper)
 	out := q2.Union(q1).Strings()
 
-	suite.Equal([]string{"ABC", "DE", "F", "G", "HI"}, out)
+	suite.Equal([]string{"G", "HI", "ABC", "DE", "F"}, out)
 }
 
 func (suite *TestFPTestSuite) TestJoinAfterNilStream() {
