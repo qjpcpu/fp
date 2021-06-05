@@ -661,10 +661,21 @@ func (suite *TestFPTestSuite) TestPrepend() {
 	suite.Equal([]string{"A", "abc", "de"}, out)
 }
 
+func (suite *TestFPTestSuite) TestPrepend2() {
+	slice := []string{"abc", "de"}
+	out := StreamOf(slice).Prepend("A", "B").Strings()
+	suite.Equal([]string{"A", "B", "abc", "de"}, out)
+}
 func (suite *TestFPTestSuite) TestAppend() {
 	slice := []string{"abc", "de"}
 	out := StreamOf(slice).Append("A").Strings()
 	suite.Equal([]string{"abc", "de", "A"}, out)
+}
+
+func (suite *TestFPTestSuite) TestAppend2() {
+	slice := []string{"abc", "de"}
+	out := StreamOf(slice).Append("A", "B").Strings()
+	suite.Equal([]string{"abc", "de", "A", "B"}, out)
 }
 
 func (suite *TestFPTestSuite) TestNilStream() {

@@ -74,9 +74,9 @@ type Stream interface {
 	// GroupBy func(element_type) any_type, this is an aggregate op, so it would block stream
 	GroupBy(fn interface{}) KVStream
 	// Append element
-	Append(element interface{}) Stream
+	Append(element ...interface{}) Stream
 	// Prepend element
-	Prepend(element interface{}) Stream
+	Prepend(element ...interface{}) Stream
 	// Zip stream , fn should be func(self_element_type,other_element_type) another_type
 	Zip(other Stream, fn interface{}) Stream
 
@@ -227,33 +227,20 @@ func (q *stream) Foreach(fn interface{}) Stream {
 	})
 }
 
-func (q *stream) Prepend(v interface{}) Stream {
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
-		var flag int32
-		return func() (reflect.Value, bool) {
-			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
-				return reflect.ValueOf(v), true
-			}
-			return next()
-		}
-	})
+func (q *stream) Prepend(v ...interface{}) Stream {
+	nq := q
+	for i := len(v) - 1; i >= 0; i-- {
+		nq = nq.prependOne(v[i])
+	}
+	return nq
 }
 
-func (q *stream) Append(v interface{}) Stream {
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
-		var flag int32
-		return func() (reflect.Value, bool) {
-			if flag == 0 {
-				if val, ok := next(); ok {
-					return val, ok
-				}
-			}
-			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
-				return reflect.ValueOf(v), true
-			}
-			return reflect.Value{}, false
-		}
-	})
+func (q *stream) Append(v ...interface{}) Stream {
+	nq := q
+	for _, elem := range v {
+		nq = nq.appendOne(elem)
+	}
+	return nq
 }
 
 func (q *stream) IsEmpty() bool {
@@ -801,6 +788,35 @@ func (q *stream) compare(a, b reflect.Value) int {
 		}
 	}
 	return 0
+}
+
+func (q *stream) prependOne(v interface{}) *stream {
+	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+		var flag int32
+		return func() (reflect.Value, bool) {
+			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
+				return reflect.ValueOf(v), true
+			}
+			return next()
+		}
+	})
+}
+
+func (q *stream) appendOne(v interface{}) *stream {
+	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+		var flag int32
+		return func() (reflect.Value, bool) {
+			if flag == 0 {
+				if val, ok := next(); ok {
+					return val, ok
+				}
+			}
+			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
+				return reflect.ValueOf(v), true
+			}
+			return reflect.Value{}, false
+		}
+	})
 }
 
 func (q *stream) Result() interface{}         { return q.getResult().Result() }
