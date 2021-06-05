@@ -53,6 +53,8 @@ type Stream interface {
 	UniqBy(fn interface{}) Stream
 	// Size of stream, this is an aggregate op, so it would block stream
 	Size() int
+	// Count alias to Size
+	Count() int
 	// Contains element
 	Contains(interface{}) bool
 	// ContainsBy func(element_type) bool
@@ -641,6 +643,10 @@ func (q *stream) getResult() Value {
 
 func (q *stream) Size() int {
 	return q.getValue(reflect.Value{}).Len()
+}
+
+func (q *stream) Count() int {
+	return q.Size()
 }
 
 func (q *stream) Contains(e interface{}) (yes bool) {
