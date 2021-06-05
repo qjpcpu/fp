@@ -35,6 +35,8 @@ type Stream interface {
 	IsEmpty() bool
 	// HasSomething in stream
 	HasSomething() bool
+	// Exists at least one element in stream
+	Exists() bool
 	// Take first n elements
 	Take(n int) Stream
 	// TakeWhile fn return false
@@ -259,6 +261,10 @@ func (q *stream) IsEmpty() bool {
 }
 
 func (q *stream) HasSomething() bool {
+	return !q.IsEmpty()
+}
+
+func (q *stream) Exists() bool {
 	return !q.IsEmpty()
 }
 
