@@ -886,3 +886,10 @@ func (suite *TestFPTestSuite) TestStreamOfFunction() {
 	out1 := StreamOf(fn1).Result().([]interface{})
 	suite.Equal([]interface{}{1, 2, 3, 4}, out1)
 }
+
+func (suite *TestFPTestSuite) TestJoinStrings() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).Map(strings.ToUpper).JoinStrings("|")
+
+	suite.Equal("A|B|C", out)
+}

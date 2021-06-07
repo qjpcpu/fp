@@ -1,5 +1,7 @@
 package fp
 
+import "reflect"
+
 type Tuple struct {
 	E1, E2 interface{}
 }
@@ -35,4 +37,22 @@ type TupleStringStrings struct {
 
 func TupleStringStringsOf(e1 string, e2 []string) TupleStringStrings {
 	return TupleStringStrings{E1: e1, E2: e2}
+}
+
+type TupleStringType struct {
+	E1 string
+	E2 reflect.Type
+}
+
+func TupleStringTypeOf(e1 string, e2 reflect.Type) TupleStringType {
+	return TupleStringType{E1: e1, E2: e2}
+}
+
+type TupleIntType struct {
+	E1 int
+	E2 reflect.Type
+}
+
+func TupleIntTypeOf(e1 int, e2 reflect.Type) TupleIntType {
+	return TupleIntType{E1: e1, E2: e2}
 }

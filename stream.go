@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -99,6 +100,8 @@ type Stream interface {
 	Uints() []uint
 	Uint32s() []uint32
 	Uint64s() []uint64
+	// JoinStrings shortcut for strings.Join(stream.Strings(),seq)
+	JoinStrings(seq string) string
 }
 
 func StreamOf(arr interface{}) Stream {
@@ -625,6 +628,10 @@ func (q *stream) GroupBy(fn interface{}) KVStream {
 		}
 		return table
 	})
+}
+
+func (q *stream) JoinStrings(seq string) string {
+	return strings.Join(q.Strings(), seq)
 }
 
 func (q *stream) getResult() Value {
