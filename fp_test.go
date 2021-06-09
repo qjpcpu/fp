@@ -893,3 +893,12 @@ func (suite *TestFPTestSuite) TestJoinStrings() {
 
 	suite.Equal("A|B|C", out)
 }
+
+func (suite *TestFPTestSuite) TestIndexNumber() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).Zip(Index(), func(s string, i int) string {
+		return fmt.Sprintf("%v-%v", s, i)
+	}).Strings()
+
+	suite.Equal([]string{"a-0", "b-1", "c-2"}, out)
+}
