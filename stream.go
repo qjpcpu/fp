@@ -868,6 +868,17 @@ func (rv Value) Result() interface{} {
 	return rv.val.Interface()
 }
 
+func (rv Value) Err() error {
+	if !rv.val.IsValid() {
+		return nil
+	}
+	res := rv.val.Interface()
+	if res == nil {
+		return nil
+	}
+	return res.(error)
+}
+
 func (rv Value) Strings() (s []string) {
 	rv.To(&s)
 	return

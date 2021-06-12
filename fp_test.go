@@ -902,3 +902,18 @@ func (suite *TestFPTestSuite) TestIndexNumber() {
 
 	suite.Equal([]string{"a-0", "b-1", "c-2"}, out)
 }
+
+func (suite *TestFPTestSuite) TestFirstError() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).Map(func(s string) error {
+		return errors.New(s)
+	}).First().Err()
+
+	suite.Equal(errors.New("a"), out)
+
+	out = StreamOf([]string{""}).Map(func(s string) error {
+		return nil
+	}).First().Err()
+
+	suite.NoError(out)
+}
