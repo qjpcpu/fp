@@ -56,3 +56,10 @@ type TupleIntType struct {
 func TupleIntTypeOf(e1 int, e2 reflect.Type) TupleIntType {
 	return TupleIntType{E1: e1, E2: e2}
 }
+
+type TupleError struct {
+	E1 interface{}
+	E2 error
+}
+
+func TuppleWithError(e1 interface{}, e2 error) TupleError { return TupleError{E1: e1, E2: e2} }
