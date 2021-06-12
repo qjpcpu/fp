@@ -917,3 +917,17 @@ func (suite *TestFPTestSuite) TestFirstError() {
 
 	suite.NoError(out)
 }
+
+func (suite *TestFPTestSuite) TestFirstErrorPattern() {
+	var count int
+	slice := []string{"a", "b", "c"}
+	err := StreamOf(slice).Map(func(s string) error {
+		count++
+		if s >= "b" {
+			return errors.New(s)
+		}
+		return nil
+	}).SkipWhile(NoError()).First().Err()
+	suite.Equal(errors.New("b"), err)
+	suite.Equal(2, count)
+}
