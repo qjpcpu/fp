@@ -931,3 +931,13 @@ func (suite *TestFPTestSuite) TestFirstErrorPattern() {
 	suite.Equal(errors.New("b"), err)
 	suite.Equal(2, count)
 }
+
+func (suite *TestFPTestSuite) TestInPlaceToSlice() {
+	holder := struct {
+		Slice []string
+	}{
+		Slice: []string{"a", "b"},
+	}
+	StreamOf(holder.Slice).Map(strings.ToUpper).ToSlice(&holder.Slice)
+	suite.Equal([]string{"A", "B"}, holder.Slice)
+}

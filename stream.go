@@ -713,8 +713,10 @@ func (q *stream) Next() (reflect.Value, bool) {
 
 func (q *stream) getValue(slice reflect.Value) reflect.Value {
 	q.getValOnce.Do(func() {
-		if !slice.IsValid() {
+		if !slice.IsValid() || slice.Len() > 0 {
 			slice = reflect.Zero(reflect.SliceOf(q.expectElemTyp))
+		} else if slice.Len() > 0 {
+			slice = reflect.MakeSlice(reflect.SliceOf(q.expectElemTyp), 0, slice.Len())
 		}
 		for {
 			if val, ok := q.iter(); ok {
