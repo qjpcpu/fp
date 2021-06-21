@@ -957,3 +957,22 @@ func (suite *TestFPTestSuite) TestFirstToPtr() {
 	StreamOf([]string{}).First().To(&out2)
 	suite.Equal("", out2)
 }
+
+func (suite *TestFPTestSuite) TestFirstToSuccess() {
+	strPtr := func(s string) *string { return &s }
+	slice := []*string{strPtr("a"), strPtr("b"), strPtr("c")}
+	var out *string
+	success := StreamOf(slice).First().To(&out)
+	suite.Equal(strPtr("a"), out)
+	suite.True(success)
+
+	var out1 *string
+	success = StreamOf(slice).Filter(func(s *string) bool { return false }).First().To(&out)
+	suite.Nil(out1)
+	suite.False(success)
+
+	var out2 string
+	success = StreamOf([]string{}).First().To(&out2)
+	suite.Equal("", out2)
+	suite.False(success)
+}

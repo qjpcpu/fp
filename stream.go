@@ -852,15 +852,16 @@ type Value struct {
 	val reflect.Value
 }
 
-func (rv Value) To(dst interface{}) {
+func (rv Value) To(dst interface{}) bool {
 	if !rv.val.IsValid() {
-		return
+		return false
 	}
 	val := reflect.ValueOf(dst)
 	if val.Kind() != reflect.Ptr {
 		panic(`fp: dst must be pointer`)
 	}
 	val.Elem().Set(rv.val)
+	return true
 }
 
 func (rv Value) Result() interface{} {
