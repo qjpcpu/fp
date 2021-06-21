@@ -941,3 +941,19 @@ func (suite *TestFPTestSuite) TestInPlaceToSlice() {
 	StreamOf(holder.Slice).Map(strings.ToUpper).ToSlice(&holder.Slice)
 	suite.Equal([]string{"A", "B"}, holder.Slice)
 }
+
+func (suite *TestFPTestSuite) TestFirstToPtr() {
+	strPtr := func(s string) *string { return &s }
+	slice := []*string{strPtr("a"), strPtr("b"), strPtr("c")}
+	var out *string
+	StreamOf(slice).First().To(&out)
+	suite.Equal(strPtr("a"), out)
+
+	var out1 *string
+	StreamOf(slice).Filter(func(s *string) bool { return false }).First().To(&out)
+	suite.Nil(out1)
+
+	var out2 string
+	StreamOf([]string{}).First().To(&out2)
+	suite.Equal("", out2)
+}
