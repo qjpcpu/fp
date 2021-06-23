@@ -28,6 +28,8 @@ type KVStream interface {
 	Size() int
 	// Result of map
 	Result() interface{}
+	// To dst ptr
+	To(dstPtr interface{}) bool
 }
 
 type kvStream struct {
@@ -185,10 +187,22 @@ func (obj *kvStream) Values() Stream {
 }
 
 func (l *kvStream) Result() interface{} {
-	return Value{
+	return l.getRelut().Result()
+}
+
+func (l *kvStream) To(ptr interface{}) bool {
+	return l.getRelut().To(ptr)
+}
+
+func (l *kvStream) getRelut() Value {
+	val := Value{
 		typ: reflect.MapOf(l.keyType, l.valType),
 		val: l.getMap(),
-	}.Result()
+	}
+	if !val.val.IsValid() || val.val.IsNil() {
+		val.val = reflect.MakeMap(val.typ)
+	}
+	return val
 }
 
 // Size of map

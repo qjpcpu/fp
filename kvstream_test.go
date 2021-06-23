@@ -87,3 +87,23 @@ func (suite *KVStreamTestSuite) TestFilter() {
 		}).Values().Result().([]int),
 	)
 }
+
+func (suite *KVStreamTestSuite) TestTo() {
+	m := map[string]int{
+		"a": 1,
+		"b": 2,
+	}
+	var mp map[string]int
+	KVStreamOf(m).Filter(func(k string, v int) bool {
+		return v == 1
+	}).To(&mp)
+	suite.Equal(map[string]int{"a": 1}, mp)
+}
+
+func (suite *KVStreamTestSuite) TestToNil() {
+	var m map[string]int
+	var mp map[string]int
+	KVStreamOf(m).To(&mp)
+	suite.Equal(map[string]int{}, mp)
+	suite.NotNil(mp)
+}
