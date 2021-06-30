@@ -780,6 +780,15 @@ func (suite *TestFPTestSuite) TestSub() {
 	suite.Nil(out)
 }
 
+func (suite *TestFPTestSuite) TestSubBy() {
+	slice1 := []string{"a", "b", "c", "d"}
+	slice2 := []string{"C", "D"}
+	out := StreamOf(slice1).SubBy(StreamOf(slice2), func(elem string) string {
+		return strings.ToLower(elem)
+	}).Strings()
+	suite.Equal([]string{"a", "b"}, out)
+}
+
 func (suite *TestFPTestSuite) TestInteract() {
 	slice1 := []int{1, 2, 3, 4}
 	slice2 := []int{2, 1}
@@ -788,6 +797,13 @@ func (suite *TestFPTestSuite) TestInteract() {
 
 	out = StreamOf(slice2).Interact(StreamOf(slice1)).Ints()
 	suite.ElementsMatch([]int{1, 2}, out)
+}
+
+func (suite *TestFPTestSuite) TestInteractBy() {
+	slice1 := []string{"a", "b", "c", "d"}
+	slice2 := []string{"C", "D"}
+	out := StreamOf(slice1).InteractBy(StreamOf(slice2), strings.ToLower).Strings()
+	suite.ElementsMatch([]string{"c", "d"}, out)
 }
 
 func (suite *TestFPTestSuite) TestLazyCollectionOp() {

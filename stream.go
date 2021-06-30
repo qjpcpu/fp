@@ -66,8 +66,12 @@ type Stream interface {
 	ToSource() Source
 	// Sub stream
 	Sub(other Stream) Stream
+	// SubBy keyfn, keyfn is func(element_type) any_type
+	SubBy(other Stream, keyfn interface{}) Stream
 	// Interact stream
 	Interact(other Stream) Stream
+	// InteractBy keyfn, keyfn is func(element_type) any_type
+	InteractBy(other Stream, keyfn interface{}) Stream
 	// Union append another stream
 	Union(Stream) Stream
 	// ToSet element as key, value is bool
@@ -418,6 +422,24 @@ func (q *stream) Sub(other Stream) Stream {
 	return q.Reject(fn.Interface())
 }
 
+func (q *stream) SubBy(other Stream, keyfn interface{}) Stream {
+	var once sync.Once
+	var set KVStream
+	keyfnval := reflect.ValueOf(keyfn)
+	getSet := func() KVStream {
+		once.Do(func() {
+			set = other.ToSetBy(keyfn)
+		})
+		return set
+	}
+	typ := reflect.FuncOf([]reflect.Type{q.expectElemTyp}, []reflect.Type{boolType}, false)
+	fn := reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
+		key := keyfnval.Call([]reflect.Value{in[0]})[0].Interface()
+		return []reflect.Value{reflect.ValueOf(getSet().Contains(key))}
+	})
+	return q.Reject(fn.Interface())
+}
+
 func (q *stream) Interact(other Stream) Stream {
 	var once sync.Once
 	var set KVStream
@@ -430,6 +452,24 @@ func (q *stream) Interact(other Stream) Stream {
 	typ := reflect.FuncOf([]reflect.Type{q.expectElemTyp}, []reflect.Type{boolType}, false)
 	fn := reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
 		return []reflect.Value{reflect.ValueOf(getSet().Contains(in[0].Interface()))}
+	})
+	return q.Filter(fn.Interface())
+}
+
+func (q *stream) InteractBy(other Stream, keyfn interface{}) Stream {
+	var once sync.Once
+	var set KVStream
+	keyfnval := reflect.ValueOf(keyfn)
+	getSet := func() KVStream {
+		once.Do(func() {
+			set = other.ToSetBy(keyfn)
+		})
+		return set
+	}
+	typ := reflect.FuncOf([]reflect.Type{q.expectElemTyp}, []reflect.Type{boolType}, false)
+	fn := reflect.MakeFunc(typ, func(in []reflect.Value) []reflect.Value {
+		key := keyfnval.Call([]reflect.Value{in[0]})[0].Interface()
+		return []reflect.Value{reflect.ValueOf(getSet().Contains(key))}
 	})
 	return q.Filter(fn.Interface())
 }
