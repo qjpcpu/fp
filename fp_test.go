@@ -992,3 +992,9 @@ func (suite *TestFPTestSuite) TestFirstToSuccess() {
 	suite.Equal("", out2)
 	suite.False(success)
 }
+
+func (suite *TestFPTestSuite) TestStream0() {
+	get := func() ([]string, error) { return []string{"a", "b"}, nil }
+	out := Stream0Of(get()).Strings()
+	suite.Equal([]string{"a", "b"}, out)
+}

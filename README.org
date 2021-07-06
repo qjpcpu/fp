@@ -78,6 +78,13 @@ source := NewLineSource(file)
 StreamOfSource(source)
 #+end_src
 
+e.g. create stream from first out parameter
+
+#+begin_src go
+get := func() ([]string, error) { return []string{"a", "b"}, nil }
+out := Stream0Of(get()).Strings()
+suite.Equal([]string{"a", "b"}, out)
+#+end_src
 
 ** high order functions
 
