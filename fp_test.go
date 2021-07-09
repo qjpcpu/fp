@@ -855,6 +855,39 @@ func (suite *TestFPTestSuite) TestZip() {
 	suite.Nil(out)
 }
 
+func (suite *TestFPTestSuite) TestZipN() {
+	slice1 := []int{1, 2, 3}
+	slice2 := []int{4, 5, 6, 7}
+	slice3 := []int{2, 3}
+	out := StreamOf(slice1).ZipN(func(i, j, k int) string {
+		return strconv.FormatInt(int64(i+j+k), 10)
+	}, StreamOf(slice2), StreamOf(slice3)).Strings()
+	suite.ElementsMatch([]string{"7", "10"}, out)
+
+	slice2 = nil
+	out = StreamOf(slice1).ZipN(func(i, j, k int) string {
+		return strconv.FormatInt(int64(i+j+k), 10)
+	}, StreamOf(slice2), StreamOf(slice3)).Strings()
+	suite.Nil(out)
+}
+
+func (suite *TestFPTestSuite) TestZipN1() {
+	slice1 := []int{1, 2, 3}
+	slice2 := []int{4, 5, 6, 7}
+	slice3 := []int{2, 3}
+	out := StreamOf(slice1).ZipN(func(i int) string {
+		return strconv.FormatInt(int64(i), 10)
+	}).Strings()
+	suite.ElementsMatch([]string{"1", "2", "3"}, out)
+
+	q := StreamOf(slice1).ZipN(func(i, j, k int) string {
+		return strconv.FormatInt(int64(i+j+k), 10)
+	}, StreamOf(slice2), StreamOf(slice3))
+	suite.True(q.Contains("7"))
+	suite.False(q.Contains("8"))
+	suite.ElementsMatch([]string{"7", "10"}, q.Strings())
+}
+
 func (suite *TestFPTestSuite) TestFullLazy() {
 	var count int
 	q := StreamOf([]int{1, 2, 3, 4}).Map(func(i int) int {

@@ -398,6 +398,18 @@ out := StreamOf(slice1).Zip(StreamOf(slice2), func(i, j int) string {
 suite.ElementsMatch([]string{"5", "7", "9"}, out)
 #+end_src
 
+*** ZipN
+
+#+begin_src go
+slice1 := []int{1, 2, 3}
+slice2 := []int{4, 5, 6, 7}
+slice3 := []int{2, 3}
+out := StreamOf(slice1).ZipN(func(i, j, k int) string {
+	return strconv.FormatInt(int64(i+j+k), 10)
+}, StreamOf(slice2), StreamOf(slice3)).Strings()
+suite.ElementsMatch([]string{"7", "10"}, out)
+#+end_src
+
 ** Result
 
 stream transform would not work unless Run/ToSlice/Result is invoked.
