@@ -88,6 +88,8 @@ type Stream interface {
 	Zip(other Stream, fn interface{}) Stream
 	// ZipN multiple stream , fn should be func(self_element_type,other_element_type1,other_element_type2,...) another_type
 	ZipN(fn interface{}, others ...Stream) Stream
+	// Branch to multiple output stream, should not used for unlimited stream
+	Branch(processors ...StreamProcessor)
 
 	// Run stream and drop value
 	Run()
@@ -122,6 +124,8 @@ func Stream0Of(arr ...interface{}) Stream {
 func StreamOfSource(s Source) Stream {
 	return newStream(s.ElemType(), s.Next)
 }
+
+type StreamProcessor func(Stream)
 
 type stream struct {
 	expectElemTyp reflect.Type
@@ -912,6 +916,30 @@ func (q *stream) appendOne(v interface{}) *stream {
 			return reflect.Value{}, false
 		}
 	})
+}
+
+func (q *stream) Branch(processors ...StreamProcessor) {
+	switch len(processors) {
+	case 0:
+		return
+	case 1:
+		processors[0](q)
+		return
+	}
+
+	slice := reflect.MakeSlice(reflect.SliceOf(q.expectElemTyp), 0, 0)
+	movingStream := newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+		return func() (val reflect.Value, ok bool) {
+			if val, ok = next(); ok {
+				slice = reflect.Append(slice, val)
+			}
+			return
+		}
+	})
+
+	for _, processor := range processors {
+		processor(StreamOf(slice.Interface()).Union(movingStream))
+	}
 }
 
 func (q *stream) Result() interface{}         { return q.getResult().Result() }

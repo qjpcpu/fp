@@ -1054,3 +1054,36 @@ func (suite *TestFPTestSuite) TestEmptyString() {
 	out1 := StreamOf(slice1).Reject(EmptyString()).Strings()
 	suite.Equal([]string{"a", "b"}, out1)
 }
+
+func (suite *TestFPTestSuite) TestMulti() {
+	slice := []string{"a", "b", "c", "d"}
+	var out1, out2 []string
+	var out3 string
+	StreamOf(slice).Reject(Equal("d")).Branch(func(stream Stream) {
+		stream.Map(strings.ToUpper).ToSlice(&out1)
+	}, func(stream Stream) {
+		out3 = stream.First().String()
+	}, func(stream Stream) {
+		stream.Skip(1).Take(1).ToSlice(&out2)
+	})
+
+	suite.Equal([]string{"A", "B", "C"}, out1)
+	suite.Equal("a", out3)
+	suite.Equal([]string{"b"}, out2)
+}
+
+func (suite *TestFPTestSuite) TestMulti2() {
+	slice := []string{"a", "b", "c", "d"}
+	var out2 []string
+	var out3 string
+	StreamOf(slice).Reject(Equal("d")).Branch(func(stream Stream) {
+
+	}, func(stream Stream) {
+		out3 = stream.First().String()
+	}, func(stream Stream) {
+		stream.Skip(1).Take(1).ToSlice(&out2)
+	})
+
+	suite.Equal("a", out3)
+	suite.Equal([]string{"b"}, out2)
+}
