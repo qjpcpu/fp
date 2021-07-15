@@ -13,6 +13,12 @@ func NoError() func(error) bool {
 	}
 }
 
+func EqualStr(s string) func(string) bool {
+	return func(v string) bool {
+		return s == v
+	}
+}
+
 /* stupid golang */
 func ShorterString(a, b string) string {
 	if len(a) > len(b) {
