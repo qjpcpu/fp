@@ -1,6 +1,9 @@
 package fp
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+)
 
 var (
 	boolType = reflect.TypeOf(true)
@@ -13,11 +16,28 @@ func NoError() func(error) bool {
 	}
 }
 
-func EqualStr(s string) func(string) bool {
-	return func(v string) bool {
-		return s == v
+/* partial functions for filter */
+
+// Equal return a function like func(same_type_of_v) bool, equal by reflect.DeepEqual
+func Equal(v interface{}) interface{} {
+	typ := reflect.TypeOf(v)
+	return reflect.MakeFunc(reflect.FuncOf([]reflect.Type{typ}, []reflect.Type{boolType}, false), func(in []reflect.Value) []reflect.Value {
+		return []reflect.Value{reflect.ValueOf(reflect.DeepEqual(in[0].Interface(), v))}
+	}).Interface()
+}
+
+// EqualIgnoreCase compare string ignore case
+func EqualIgnoreCase(v string) func(string) bool {
+	return func(in string) bool {
+		return strings.EqualFold(v, in)
 	}
 }
+
+func EmptyString() func(string) bool {
+	return func(s string) bool { return strings.TrimSpace(s) == "" }
+}
+
+/* functions for reduce */
 
 /* stupid golang */
 func ShorterString(a, b string) string {

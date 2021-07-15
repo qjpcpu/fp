@@ -1031,3 +1031,26 @@ func (suite *TestFPTestSuite) TestStream0() {
 	out := Stream0Of(get()).Strings()
 	suite.Equal([]string{"a", "b"}, out)
 }
+
+func (suite *TestFPTestSuite) TestEqual() {
+	slice := []int{1, 2, 3, 4}
+
+	out := StreamOf(slice).Filter(Equal(3)).Ints()
+	suite.Equal([]int{3}, out)
+
+	slice1 := []string{"a", "b"}
+	out1 := StreamOf(slice1).Filter(Equal("b")).Strings()
+	suite.Equal([]string{"b"}, out1)
+}
+
+func (suite *TestFPTestSuite) TestEqualIgnoreCase() {
+	slice1 := []string{"a", "b"}
+	out1 := StreamOf(slice1).Filter(EqualIgnoreCase("B")).Strings()
+	suite.Equal([]string{"b"}, out1)
+}
+
+func (suite *TestFPTestSuite) TestEmptyString() {
+	slice1 := []string{"a", "b", " ", "", "\t"}
+	out1 := StreamOf(slice1).Reject(EmptyString()).Strings()
+	suite.Equal([]string{"a", "b"}, out1)
+}

@@ -134,6 +134,17 @@ out := StreamOf(slice).Filter(func(s string) bool {
 	return s == "b"
 }).Strings()
 suite.Equal([]string{"b"}, out)
+
+// there're some helper partial functions
+slice := []string{"a", "b", "c"}
+out := StreamOf(slice).Filter(Equal("b")).Strings()
+suite.Equal([]string{"b"}, out)
+
+out := StreamOf(slice).Filter(EqualIgnoreCase("B")).Strings()
+suite.Equal([]string{"b"}, out)
+
+out := StreamOf([]string{"a",""}).Reject(EmptyString()).Strings()
+suite.Equal([]string{"a"}, out)
 #+end_src
 
 *** Reject
