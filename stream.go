@@ -797,7 +797,7 @@ func (q *stream) Next() (reflect.Value, bool) {
 
 func (q *stream) getValue(slice reflect.Value) reflect.Value {
 	q.getValOnce.Do(func() {
-		if !slice.IsValid() || slice.Len() > 0 {
+		if !slice.IsValid() {
 			slice = reflect.Zero(reflect.SliceOf(q.expectElemTyp))
 		} else if slice.Len() > 0 {
 			slice = reflect.MakeSlice(reflect.SliceOf(q.expectElemTyp), 0, slice.Len())
@@ -1087,15 +1087,5 @@ func repeatableIter(iter iterator, f func(reflect.Value) bool) iterator {
 			return val, true
 		}
 		return iter()
-	}
-}
-
-func normalIter(iter iterator, f func(reflect.Value) bool) {
-	for {
-		val, ok := iter()
-		if !ok {
-			break
-		}
-		f(val)
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -325,12 +327,16 @@ func (suite *TestFPTestSuite) TestIsEmpty() {
 	suite.False(q.IsEmpty())
 	out := q.First()
 	suite.Equal("abc", out.String())
+	var out1 []string
+	q.ToSlice(&out1)
+	suite.Equal([]string{"abc", "de", "f"}, out1)
 }
 
 func (suite *TestFPTestSuite) TestHasSomething() {
 	slice := []string{"abc", "de", "f"}
 	q := StreamOf(slice)
 	suite.True(q.HasSomething())
+	suite.True(q.Exists())
 	out := q.First()
 	suite.Equal("abc", out.String())
 }
@@ -410,6 +416,20 @@ func (suite *TestFPTestSuite) TestContains() {
 	suite.True(q.Contains(ptr("de")))
 	suite.False(q.Contains(ptr("e")))
 	suite.Equal([]string{"ABC", "DE", "F"}, q.Map(func(s *string) string { return strings.ToUpper(*s) }).Strings())
+}
+
+func (suite *TestFPTestSuite) TestContains1() {
+	suite.True(StreamOf([]int{1}).Contains(1))
+	suite.True(StreamOf([]uint{1}).Contains(uint(1)))
+	suite.True(StreamOf([]bool{false}).Contains(false))
+	suite.True(StreamOf([]float64{1}).Contains(float64(1)))
+}
+
+func (suite *TestFPTestSuite) TestRun() {
+	suite.NotPanics(func() {
+		StreamOf([]int{1}).Run()
+		_ = StreamOf([]int{1}).(Source).ElemType()
+	})
 }
 
 func (suite *TestFPTestSuite) TestContainsBy() {
@@ -1055,6 +1075,14 @@ func (suite *TestFPTestSuite) TestEmptyString() {
 	suite.Equal([]string{"a", "b"}, out1)
 }
 
+func (suite *TestFPTestSuite) TestMulti0() {
+	slice := []string{"a", "b", "c", "d"}
+	StreamOf(slice).Branch()
+	StreamOf(slice).Branch(func(s Stream) {
+		suite.Equal(slice, s.Strings())
+	})
+}
+
 func (suite *TestFPTestSuite) TestMulti() {
 	slice := []string{"a", "b", "c", "d"}
 	var out1, out2 []string
@@ -1086,4 +1114,200 @@ func (suite *TestFPTestSuite) TestMulti2() {
 
 	suite.Equal("a", out3)
 	suite.Equal([]string{"b"}, out2)
+}
+
+func (suite *TestFPTestSuite) TestZipnFuncCheck() {
+	slice := []string{"a", "b", "c", "d"}
+	suite.Panics(func() {
+		StreamOf(slice).ZipN(func(string) string { return "" }, StreamOf([]string{"a"}))
+	})
+}
+
+func (suite *TestFPTestSuite) TestStreamMustHaveIterator() {
+	s := newStream(reflect.TypeOf(1), nil)
+	suite.NotNil(s.iter)
+	_, v := s.iter()
+	suite.False(v)
+}
+
+func (suite *TestFPTestSuite) TestMustFlattenSlice() {
+	suite.Panics(func() {
+		StreamOf([]string{}).Flatten()
+	})
+}
+
+func (suite *TestFPTestSuite) TestPartitionSize() {
+	suite.Panics(func() {
+		StreamOf([]string{}).Partition(0)
+	})
+}
+
+func (suite *TestFPTestSuite) TestToSliceMustBePtr() {
+	suite.Panics(func() {
+		StreamOf([]string{}).ToSlice([]string{})
+	})
+}
+
+func (suite *TestFPTestSuite) TestMakeIter() {
+	suite.Panics(func() {
+		makeIter(reflect.ValueOf(1))
+	})
+}
+
+func (suite *TestFPTestSuite) TestNaturalNumbers() {
+	suite.Equal(uint64(0), NaturalNumbers().First().Uint64())
+}
+
+func (suite *TestFPTestSuite) TestMaxNaturalNumbers() {
+	s := &naturalNumSource{i: math.MaxUint64}
+	suite.Equal(0, StreamOf(s).Count())
+}
+
+type _kvdemo struct{ i int }
+
+func (d *_kvdemo) ElemType() (reflect.Type, reflect.Type) {
+	return reflect.TypeOf(0), reflect.TypeOf(0)
+}
+func (d *_kvdemo) Next() (reflect.Value, reflect.Value, bool) {
+	if d.i > 0 {
+		i := d.i
+		d.i--
+		return reflect.ValueOf(i), reflect.ValueOf(i), true
+	}
+	return reflect.Value{}, reflect.Value{}, false
+}
+
+func (suite *TestFPTestSuite) TestKVstreamSource() {
+	suite.Equal([]int{1, 2}, KVStreamOf(&_kvdemo{i: 2}).Keys().Sort().Ints())
+	suite.Equal(2, KVStreamOf(&_kvdemo{i: 2}).Size())
+}
+
+func (suite *TestFPTestSuite) TestKVstreamConvertiableContain() {
+	suite.True(KVStreamOf(&_kvdemo{i: 2}).Contains(uint64(1)))
+}
+func (suite *TestFPTestSuite) TestKvStreamMustBeMap() {
+	suite.Panics(func() {
+		KVStreamOf([]string{})
+	})
+}
+
+func (suite *TestFPTestSuite) TestCompare() {
+	suite.Equal(-1, StreamOf([]string{}).(*stream).compare(reflect.ValueOf("a"), reflect.ValueOf("b")))
+	suite.Equal(1, StreamOf([]string{}).(*stream).compare(reflect.ValueOf("b"), reflect.ValueOf("a")))
+	suite.Equal(0, StreamOf([]string{}).(*stream).compare(reflect.ValueOf("b"), reflect.ValueOf("b")))
+
+	suite.Equal(-1, StreamOf([]uint64{}).(*stream).compare(reflect.ValueOf(uint64(1)), reflect.ValueOf(uint64(2))))
+	suite.Equal(1, StreamOf([]uint64{}).(*stream).compare(reflect.ValueOf(uint64(3)), reflect.ValueOf(uint64(2))))
+
+	suite.Equal(-1, StreamOf([]bool{}).(*stream).compare(reflect.ValueOf(false), reflect.ValueOf(true)))
+	suite.Equal(1, StreamOf([]bool{}).(*stream).compare(reflect.ValueOf(true), reflect.ValueOf(false)))
+
+	suite.Equal(-1, StreamOf([]TupleStringInt{}).(*stream).compare(reflect.ValueOf(TupleStringInt{E2: 1}), reflect.ValueOf(TupleStringInt{E2: 2})))
+	suite.Equal(1, StreamOf([]TupleStringInt{}).(*stream).compare(reflect.ValueOf(TupleStringInt{E2: 3}), reflect.ValueOf(TupleStringInt{E2: 2})))
+}
+
+func (suite *TestFPTestSuite) TestToXXX() {
+	suite.Equal([]int64{1}, StreamOf([]int64{1}).Int64s())
+	suite.Equal([]int32{1}, StreamOf([]int32{1}).Int32s())
+	suite.Equal([]uint{1}, StreamOf([]uint{1}).Uints())
+	suite.Equal([]uint32{1}, StreamOf([]uint32{1}).Uint32s())
+	suite.Equal([]uint64{1}, StreamOf([]uint64{1}).Uint64s())
+	suite.Equal([]float64{1}, StreamOf([]float64{1}).Float64s())
+
+	suite.Equal(int64(1), StreamOf([]int64{1}).First().Int64())
+	suite.Equal(int32(1), StreamOf([]int32{1}).First().Int32())
+	suite.Equal(uint32(1), StreamOf([]uint32{1}).First().Uint32())
+	suite.Equal(float64(1), StreamOf([]float64{1}).First().Float64())
+
+	suite.Panics(func() {
+		StreamOf([]int{1}).First().To(1)
+	})
+}
+
+func (suite *TestFPTestSuite) TestInvalidValue() {
+	suite.Nil(Value{}.Result())
+	suite.Nil(Value{}.Err())
+}
+
+func (suite *TestFPTestSuite) TestRepeatableIter() {
+	suite.Nil(repeatableIter(nil, nil))
+}
+
+func (suite *TestFPTestSuite) TestTickerSourceFinish() {
+	ds := NewDelaySource(time.Microsecond)
+	suite.Equal(reflect.TypeOf(time.Time{}), ds.ElemType())
+	_, ok := ds.Next()
+	suite.True(ok)
+}
+
+func (suite *TestFPTestSuite) TestTuples() {
+	suite.NotNil(TupleOf(1, 2))
+	suite.Equal("a", TupleStringOf("a", "b").E1)
+	suite.Equal("a", TupleStringAnyOf("a", "b").E1)
+	suite.Equal("a", TupleStringIntOf("a", 1).E1)
+	suite.Equal("a", TupleStringStringsOf("a", []string{"b"}).E1)
+	suite.Equal("a", TupleStringTypeOf("a", reflect.TypeOf([]string{"b"})).E1)
+	suite.Equal(1, TupleIntTypeOf(1, reflect.TypeOf([]string{"b"})).E1)
+	suite.Equal(errors.New("err"), TuppleWithError(1, errors.New("err")).E2)
+}
+
+func (suite *TestFPTestSuite) TestReduceHelper() {
+	suite.Equal("a", ShorterString("a", "bb"))
+	suite.Equal("b", ShorterString("aa", "b"))
+	suite.Equal("bb", LongerString("a", "bb"))
+	suite.Equal("aa", LongerString("aa", "b"))
+
+	suite.Equal(2, MaxInt(1, 2))
+	suite.Equal(2, MaxInt(2, 0))
+
+	suite.Equal(int32(2), MaxInt32(1, 2))
+	suite.Equal(int32(2), MaxInt32(2, 0))
+
+	suite.Equal(int8(2), MaxInt8(1, 2))
+	suite.Equal(int8(2), MaxInt8(2, 0))
+
+	suite.Equal(int16(2), MaxInt16(1, 2))
+	suite.Equal(int16(2), MaxInt16(2, 0))
+
+	suite.Equal(int64(2), MaxInt64(1, 2))
+	suite.Equal(int64(2), MaxInt64(2, 0))
+
+	suite.Equal(uint32(2), MaxUint32(1, 2))
+	suite.Equal(uint32(2), MaxUint32(2, 0))
+
+	suite.Equal(uint8(2), MaxUint8(1, 2))
+	suite.Equal(uint8(2), MaxUint8(2, 0))
+
+	suite.Equal(uint64(2), MaxUint64(1, 2))
+	suite.Equal(uint64(2), MaxUint64(2, 0))
+
+	suite.Equal(uint16(2), MaxUint16(1, 2))
+	suite.Equal(uint16(2), MaxUint16(2, 0))
+
+	suite.Equal(1, MinInt(2, 1))
+	suite.Equal(0, MinInt(0, 2))
+
+	suite.Equal(int32(1), MinInt32(2, 1))
+	suite.Equal(int32(0), MinInt32(0, 2))
+
+	suite.Equal(int8(1), MinInt8(2, 1))
+	suite.Equal(int8(0), MinInt8(0, 2))
+
+	suite.Equal(int16(1), MinInt16(2, 1))
+	suite.Equal(int16(0), MinInt16(0, 2))
+
+	suite.Equal(int64(1), MinInt64(2, 1))
+	suite.Equal(int64(0), MinInt64(0, 2))
+
+	suite.Equal(uint32(1), MinUint32(2, 1))
+	suite.Equal(uint32(0), MinUint32(0, 2))
+
+	suite.Equal(uint8(1), MinUint8(2, 1))
+	suite.Equal(uint8(0), MinUint8(0, 2))
+
+	suite.Equal(uint64(1), MinUint64(2, 1))
+	suite.Equal(uint64(0), MinUint64(0, 2))
+
+	suite.Equal(uint16(1), MinUint16(2, 1))
+	suite.Equal(uint16(0), MinUint16(0, 2))
 }

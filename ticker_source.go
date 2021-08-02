@@ -17,10 +17,8 @@ type TickerSource struct {
 func (cs *TickerSource) Stop()                  { cs.ticker.Stop() }
 func (cs *TickerSource) ElemType() reflect.Type { return reflect.TypeOf(time.Time{}) }
 func (cs *TickerSource) Next() (reflect.Value, bool) {
-	if tm, ok := <-cs.ticker.C; ok {
-		return reflect.ValueOf(tm), true
-	}
-	return reflect.Value{}, false
+	tm, ok := <-cs.ticker.C
+	return reflect.ValueOf(tm), ok
 }
 
 func NewDelaySource(interval time.Duration) Source {
