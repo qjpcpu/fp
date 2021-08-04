@@ -1464,3 +1464,198 @@ func (suite *TestFPTestSuite) TestReduce0NilStream() {
 	}).Result().(int)
 	suite.True(ok)
 }
+
+func (suite *TestFPTestSuite) TestNilStreamXXX() {
+	suite.True(newNilStream().Reject(func(string) bool { return false }).IsEmpty())
+	suite.True(newNilStream().Foreach(func(string) {}).IsEmpty())
+	suite.True(newNilStream().Flatten().IsEmpty())
+	suite.True(newNilStream().Partition(10).IsEmpty())
+	suite.True(newNilStream().PartitionBy(func(string) bool { return true }, true).IsEmpty())
+	suite.False(newNilStream().First().val.IsValid())
+	suite.False(newNilStream().Flatten().HasSomething())
+	suite.False(newNilStream().Flatten().Exists())
+	suite.False(newNilStream().Take(10).Exists())
+	suite.Zero(newNilStream().Size())
+	suite.Zero(newNilStream().Count())
+	suite.False(newNilStream().Uniq().Exists())
+	suite.False(newNilStream().UniqBy(func(int) int { return 0 }).Exists())
+	suite.False(newNilStream().Sort().Exists())
+	suite.False(newNilStream().Skip(10).Exists())
+	suite.False(newNilStream().SkipWhile(func(int) bool { return true }).Exists())
+	suite.False(newNilStream().SortBy(func(int, int) bool { return true }).Exists())
+	suite.False(newNilStream().TakeWhile(func(string) bool { return true }).Exists())
+	suite.False(newNilStream().Contains(1))
+	suite.False(newNilStream().ContainsBy(func(int) bool { return true }))
+	suite.Equal(newNilSource(), newNilStream().ToSource())
+	suite.False(newNilStream().Sub(StreamOf([]int{1})).Exists())
+	suite.False(newNilStream().SubBy(StreamOf([]int{1}), func(int) int { return 0 }).Exists())
+	suite.False(newNilStream().Interact(StreamOf([]int{1})).Exists())
+	suite.False(newNilStream().InteractBy(StreamOf([]int{1}), func(int) int { return 0 }).Exists())
+	suite.Equal([]int{1}, newNilStream().Union(StreamOf([]int{1})).Ints())
+	suite.Equal(newNilKVStream(), newNilStream().ToSet())
+	suite.Equal(newNilKVStream(), newNilStream().ToSetBy(func(int) int { return 0 }))
+	suite.Equal(newNilKVStream(), newNilStream().GroupBy(func(int) int { return 0 }))
+	suite.Equal([]int{1}, newNilStream().Append(1).Ints())
+	suite.Equal([]int{1}, newNilStream().Prepend(1).Ints())
+	suite.Len(newNilStream().Append().Ints(), 0)
+	suite.False(newNilStream().Zip(StreamOf([]int{1}), func(int, int) int { return 1 }).Exists())
+	suite.False(newNilStream().ZipN(func(int, int) int { return 1 }, StreamOf([]int{1})).Exists())
+	suite.Nil(newNilStream().Result())
+	suite.Nil(newNilStream().Strings())
+	suite.Nil(newNilStream().StringsList())
+	suite.Nil(newNilStream().Ints())
+	suite.Nil(newNilStream().Float64s())
+	suite.Nil(newNilStream().Bytes())
+	suite.Nil(newNilStream().Int64s())
+	suite.Nil(newNilStream().Int32s())
+	suite.Nil(newNilStream().Uint32s())
+	suite.Nil(newNilStream().Uint64s())
+	suite.Nil(newNilStream().Uints())
+	suite.Equal("", newNilStream().JoinStrings(","))
+	suite.NotPanics(func() {
+		newNilStream().Run()
+		newNilStream().Branch()
+	})
+}
+
+func (suite *TestFPTestSuite) TestKVNilStreamXXX() {
+	suite.Zero(newNilKVStream().Foreach(func(string, string) {}).Size())
+	suite.Zero(newNilKVStream().Map(func(string, string) (string, string) { return "", "" }).Size())
+	suite.Zero(newNilKVStream().FlatMap(func(string, string) string { return "" }).Size())
+	suite.Zero(newNilKVStream().Filter(func(string, string) bool { return true }).Size())
+	suite.Zero(newNilKVStream().Reject(func(string, string) bool { return true }).Size())
+	suite.False(newNilKVStream().Contains(1))
+	suite.False(newNilKVStream().Keys().Exists())
+	suite.False(newNilKVStream().Values().Exists())
+	suite.Nil(newNilKVStream().Result())
+}
+
+func (suite *TestFPTestSuite) TestNilSourceXXX() {
+	suite.Equal(reflect.TypeOf(nil), newNilSource().ElemType())
+	v, ok := newNilSource().Next()
+	suite.False(v.IsValid())
+	suite.False(ok)
+}
+
+func (suite *TestFPTestSuite) TestIsNilStream() {
+	suite.True(isNilStream(nil))
+	suite.True(isNilStream(newNilStream()))
+}
+
+func (suite *TestFPTestSuite) TestHorriableFlatten() {
+	out := StreamOf([]Stream{
+		StreamOf([]Stream{
+			StreamOf([]Stream{
+				StreamOf([]string{"a", "b", "c"}),
+				StreamOf([]string{"d", "e", "f"}),
+			}),
+			StreamOf([]Stream{
+				StreamOf([]string{"g", "h", "i"}),
+				StreamOf([]string{"j", "k", "l"}),
+			}),
+		}),
+		StreamOf([]Stream{
+			StreamOf([]Stream{
+				StreamOf([]string{"m", "n", "o"}),
+				StreamOf([]string{"p", "q", "r"}),
+			}),
+			StreamOf([]Stream{
+				StreamOf([]string{"s", "t", "u"}),
+				StreamOf([]string{"v", "w", "x"}),
+				StreamOf([]string{"y", "z"}),
+			}),
+		}),
+	}).Flatten().Flatten().Flatten().JoinStrings("")
+	suite.Equal(`abcdefghijklmnopqrstuvwxyz`, out)
+}
+
+func (suite *TestFPTestSuite) TestHorriableFlattenWithNilStream() {
+	out := StreamOf([]Stream{
+		newNilStream(),
+		StreamOf([]Stream{
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				StreamOf([]string{"a", "b", "c"}),
+				newNilStream(),
+				StreamOf([]string{"d", "e", "f"}),
+				newNilStream(),
+			}),
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				StreamOf([]string{"g", "h", "i"}),
+				newNilStream(),
+				StreamOf([]string{"j", "k", "l"}),
+				newNilStream(),
+			}),
+			newNilStream(),
+		}),
+		newNilStream(),
+		StreamOf([]Stream{
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				StreamOf([]string{"m", "n", "o"}),
+				newNilStream(),
+				StreamOf([]string{"p", "q", "r"}),
+				newNilStream(),
+			}),
+			newNilStream(),
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				StreamOf([]string{"s", "t", "u"}),
+				newNilStream(),
+				StreamOf([]string{"v", "w", "x"}),
+				newNilStream(),
+				StreamOf([]string{"y", "z"}),
+				newNilStream(),
+			}),
+			newNilStream(),
+		}),
+		newNilStream(),
+	}).Flatten().Flatten().Flatten().JoinStrings("")
+	suite.Equal(`abcdefghijklmnopqrstuvwxyz`, out)
+}
+
+func (suite *TestFPTestSuite) TestHorriableFlattenWithAllNilStream() {
+	out := StreamOf([]Stream{
+		newNilStream(),
+		StreamOf([]Stream{
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				newNilStream(),
+				newNilStream(),
+			}),
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				newNilStream(),
+				newNilStream(),
+			}),
+			newNilStream(),
+		}),
+		newNilStream(),
+		StreamOf([]Stream{
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				newNilStream(),
+				newNilStream(),
+			}),
+			newNilStream(),
+			newNilStream(),
+			StreamOf([]Stream{
+				newNilStream(),
+				newNilStream(),
+				newNilStream(),
+				newNilStream(),
+			}),
+			newNilStream(),
+		}),
+		newNilStream(),
+	}).Flatten().Flatten().Flatten().JoinStrings("")
+	suite.Equal(``, out)
+}

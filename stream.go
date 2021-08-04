@@ -251,11 +251,30 @@ func (q *stream) Flatten() Stream {
 	var elemType reflect.Type
 	_makeIter := makeIter
 	if q.expectElemTyp == streamType {
-		first := q.First().Result()
-		if first == nil || isNilStream(first.(Stream)) {
-			return newNilStream()
+		iter := q.iter
+		for {
+			v, ok := iter()
+			if !ok {
+				/* no inner stream found and cause we couldn't guess inner type */
+				/* just return nil stream */
+				return newNilStream()
+			}
+			/* we should find first non-NilStream element */
+			if isNilStream(v.Interface().(Stream)) {
+				continue
+			}
+			/* gotcha */
+			elemType = v.Interface().(Stream).ToSource().ElemType()
+			/* recover q's iter */
+			var flag int32
+			q.iter = func() (reflect.Value, bool) {
+				if atomic.CompareAndSwapInt32(&flag, 0, 1) {
+					return v, true
+				}
+				return iter()
+			}
+			break
 		}
-		elemType = first.(Stream).ToSource().ElemType()
 		_makeIter = func(v reflect.Value) (reflect.Type, iterator) {
 			return elemType, v.Interface().(Stream).ToSource().Next
 		}
@@ -271,6 +290,13 @@ func (q *stream) Flatten() Stream {
 					inner, ok = outernext()
 					if !ok {
 						return
+					}
+					/* we should jump over nil stream element */
+					if innerS, isStream := inner.Interface().(Stream); isStream && isNilStream(innerS) {
+						/* disable inner value */
+						inner = reflect.Value{}
+						ok = false
+						continue
 					}
 					_, innernext = _makeIter(inner)
 				}
