@@ -1018,6 +1018,18 @@ func (suite *TestFPTestSuite) TestToSet() {
 
 }
 
+func (suite *TestFPTestSuite) TestToSetBy() {
+	var out map[int][]byte
+	slice := []string{"a", "aa", "aaa"}
+	StreamOf(slice).ToSetBy(func(v string) (int, []byte) {
+		return len(v), []byte(strings.ToUpper(v))
+	}).To(&out)
+	suite.Len(out, 3)
+	suite.Equal("A", string(out[1]))
+	suite.Equal("AA", string(out[2]))
+	suite.Equal("AAA", string(out[3]))
+}
+
 func (suite *TestFPTestSuite) TestZip() {
 	slice1 := []int{1, 2, 3}
 	slice2 := []int{4, 5, 6, 7}

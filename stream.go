@@ -76,7 +76,7 @@ type Stream interface {
 	Union(Stream) Stream
 	// ToSet element as key, value is bool
 	ToSet() KVStream
-	// ToSet by func(element_type) any_type
+	// ToSet by func(element_type) any_type or func(element_type) (key_type,val_type)
 	ToSetBy(fn interface{}) KVStream
 	// GroupBy func(element_type) any_type, this is an aggregate op, so it would block stream
 	GroupBy(fn interface{}) KVStream
@@ -586,15 +586,26 @@ func (q *stream) ToSetBy(fn interface{}) KVStream {
 	fntyp := reflect.TypeOf(fn)
 	fnval := reflect.ValueOf(fn)
 
+	keyTyp, valTyp := fntyp.Out(0), q.expectElemTyp
+	getKV := func(elem reflect.Value) (reflect.Value, reflect.Value) {
+		return fnval.Call([]reflect.Value{elem})[0], elem
+	}
+	if fntyp.NumOut() == 2 {
+		keyTyp, valTyp = fntyp.Out(0), fntyp.Out(1)
+		getKV = func(elem reflect.Value) (reflect.Value, reflect.Value) {
+			res := fnval.Call([]reflect.Value{elem})
+			return res[0], res[1]
+		}
+	}
 	iter := q.iter
-	return newKvStream(fntyp.Out(0), q.expectElemTyp, func() reflect.Value {
-		table := reflect.MakeMap(reflect.MapOf(fntyp.Out(0), q.expectElemTyp))
+	return newKvStream(keyTyp, valTyp, func() reflect.Value {
+		table := reflect.MakeMap(reflect.MapOf(keyTyp, valTyp))
 		for {
 			val, ok := iter()
 			if !ok {
 				break
 			}
-			table.SetMapIndex(fnval.Call([]reflect.Value{val})[0], val)
+			table.SetMapIndex(getKV(val))
 		}
 		return table
 	})
