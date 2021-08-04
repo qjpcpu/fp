@@ -159,6 +159,9 @@ func (q *stream) Map(fn interface{}) Stream {
 }
 
 func (q *stream) Zip(other Stream, fn interface{}) Stream {
+	if isNilStream(other) {
+		return other
+	}
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	onext := other.ToSource().Next
@@ -175,6 +178,11 @@ func (q *stream) Zip(other Stream, fn interface{}) Stream {
 }
 
 func (q *stream) ZipN(fn interface{}, others ...Stream) Stream {
+	for _, s := range others {
+		if isNilStream(s) {
+			return s
+		}
+	}
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	if fnTyp.NumIn() != len(others)+1 {
@@ -236,10 +244,25 @@ func (q *stream) Filter(fn interface{}) Stream {
 }
 
 func (q *stream) Flatten() Stream {
-	if kind := q.expectElemTyp.Kind(); kind != reflect.Chan && kind != reflect.Slice && kind != reflect.Array {
+	if kind := q.expectElemTyp.Kind(); kind != reflect.Chan && kind != reflect.Slice && kind != reflect.Array && q.expectElemTyp != streamType {
 		panic(q.expectElemTyp.String() + " can not be flatten")
 	}
-	return newStream(q.expectElemTyp.Elem(), q.iter, func(outernext iterator) iterator {
+
+	var elemType reflect.Type
+	_makeIter := makeIter
+	if q.expectElemTyp == streamType {
+		first := q.First().Result()
+		if first == nil || isNilStream(first.(Stream)) {
+			return newNilStream()
+		}
+		elemType = first.(Stream).ToSource().ElemType()
+		_makeIter = func(v reflect.Value) (reflect.Type, iterator) {
+			return elemType, v.Interface().(Stream).ToSource().Next
+		}
+	} else {
+		elemType = q.expectElemTyp.Elem()
+	}
+	return newStream(elemType, q.iter, func(outernext iterator) iterator {
 		var innernext iterator
 		var inner reflect.Value
 		return func() (item reflect.Value, ok bool) {
@@ -249,7 +272,7 @@ func (q *stream) Flatten() Stream {
 					if !ok {
 						return
 					}
-					_, innernext = makeIter(inner)
+					_, innernext = _makeIter(inner)
 				}
 				item, ok = innernext()
 				if !ok {
@@ -434,6 +457,9 @@ func (q *stream) Uniq() Stream {
 }
 
 func (q *stream) Union(other Stream) Stream {
+	if isNilStream(other) {
+		return q
+	}
 	oNext := other.ToSource().Next
 	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var otherDone bool
@@ -451,6 +477,9 @@ func (q *stream) Union(other Stream) Stream {
 }
 
 func (q *stream) Sub(other Stream) Stream {
+	if isNilStream(other) {
+		return q
+	}
 	var once sync.Once
 	var set KVStream
 	getSet := func() KVStream {
@@ -467,6 +496,9 @@ func (q *stream) Sub(other Stream) Stream {
 }
 
 func (q *stream) SubBy(other Stream, keyfn interface{}) Stream {
+	if isNilStream(other) {
+		return q
+	}
 	var once sync.Once
 	var set KVStream
 	keyfnval := reflect.ValueOf(keyfn)
@@ -485,6 +517,9 @@ func (q *stream) SubBy(other Stream, keyfn interface{}) Stream {
 }
 
 func (q *stream) Interact(other Stream) Stream {
+	if isNilStream(other) {
+		return other
+	}
 	var once sync.Once
 	var set KVStream
 	getSet := func() KVStream {
@@ -501,6 +536,9 @@ func (q *stream) Interact(other Stream) Stream {
 }
 
 func (q *stream) InteractBy(other Stream, keyfn interface{}) Stream {
+	if isNilStream(other) {
+		return other
+	}
 	var once sync.Once
 	var set KVStream
 	keyfnval := reflect.ValueOf(keyfn)

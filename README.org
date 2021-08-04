@@ -182,6 +182,17 @@ suite.Equal("abcdef", string(out))
 deep flatten
 
 #+begin_src go
+databases := []string{"db1", "db2"}
+tables := []string{"table1", "table2"}
+fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+	return StreamOf(tables).Map(func(table string) TupleString {
+		return TupleStringOf(db, table)
+	})
+}).Map(func(t TupleString) string {
+	return t.E1 + "." + t.E2
+}).Strings()
+suite.Equal([]string{"db1.table1", "db1.table2", "db2.table1", "db2.table2"}, fullnames)
+
 slice := [][]string{
 	{"abc", "de", "f"},
 	{"g", "hi"},

@@ -515,6 +515,78 @@ func (suite *TestFPTestSuite) TestDeepFlatten() {
 	suite.Equal([]string{"abc", "f", "g"}, out1)
 }
 
+func (suite *TestFPTestSuite) TestDeepFlatten2() {
+	databases := []string{"db1", "db2"}
+	tables := []string{"table1", "table2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) (out []TupleString) {
+		StreamOf(tables).Map(func(table string) TupleString {
+			return TupleStringOf(db, table)
+		}).ToSlice(&out)
+		return
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Equal([]string{"db1.table1", "db1.table2", "db2.table1", "db2.table2"}, fullnames)
+}
+
+func (suite *TestFPTestSuite) TestFlattenInnerStream() {
+	databases := []string{"db1", "db2"}
+	tables := []string{"table1", "table2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+		return StreamOf(tables).Map(func(table string) TupleString {
+			return TupleStringOf(db, table)
+		})
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Equal([]string{"db1.table1", "db1.table2", "db2.table1", "db2.table2"}, fullnames)
+}
+
+func (suite *TestFPTestSuite) TestFlattenInnerNilStream() {
+	databases := []string{"db1", "db2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+		return newNilStream()
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Len(fullnames, 0)
+}
+
+func (suite *TestFPTestSuite) TestFlattenInnerEmptyStream() {
+	databases := []string{"db1", "db2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+		return StreamOf([]string{})
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Len(fullnames, 0)
+}
+
+func (suite *TestFPTestSuite) TestFlattenInnerStreamButOuterIsEmpty() {
+	databases := []string{}
+	tables := []string{"table1", "table2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+		return StreamOf(tables).Map(func(table string) TupleString {
+			return TupleStringOf(db, table)
+		})
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Nil(fullnames)
+}
+
+func (suite *TestFPTestSuite) TestFlattenInnerStreamButOuterIsNil() {
+	tables := []string{"table1", "table2"}
+	fullnames := newNilStream().FlatMap(func(db string) Stream {
+		return StreamOf(tables).Map(func(table string) TupleString {
+			return TupleStringOf(db, table)
+		})
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Nil(fullnames)
+}
+
 func (suite *TestFPTestSuite) TestHybridFlatten() {
 	slice := []chan string{
 		make(chan string, 3),
@@ -650,6 +722,17 @@ func (suite *TestFPTestSuite) TestJoinStream() {
 	out := q2.Union(q1).Strings()
 
 	suite.Equal([]string{"G", "HI", "ABC", "DE", "F"}, out)
+}
+
+func (suite *TestFPTestSuite) TestUnionStreamWithNil() {
+	slice1 := []string{"abc", "de", "f"}
+	q1 := StreamOf(slice1).Map(strings.ToUpper)
+	out := q1.Union(newNilStream()).Strings()
+	suite.Equal([]string{"ABC", "DE", "F"}, out)
+
+	q2 := StreamOf(slice1).Map(strings.ToUpper)
+	out = newNilStream().Union(q2).Strings()
+	suite.Equal([]string{"ABC", "DE", "F"}, out)
 }
 
 func (suite *TestFPTestSuite) TestJoinAfterNilStream() {
@@ -800,6 +883,15 @@ func (suite *TestFPTestSuite) TestSub() {
 	suite.Nil(out)
 }
 
+func (suite *TestFPTestSuite) TestSubNil() {
+	slice1 := []int{1, 2, 3, 4}
+	out := StreamOf(slice1).Sub(newNilStream()).Ints()
+	suite.Equal([]int{1, 2, 3, 4}, out)
+
+	out = StreamOf(slice1).SubBy(newNilStream(), func(int) int { return 0 }).Ints()
+	suite.Equal([]int{1, 2, 3, 4}, out)
+}
+
 func (suite *TestFPTestSuite) TestSubBy() {
 	slice1 := []string{"a", "b", "c", "d"}
 	slice2 := []string{"C", "D"}
@@ -817,6 +909,32 @@ func (suite *TestFPTestSuite) TestInteract() {
 
 	out = StreamOf(slice2).Interact(StreamOf(slice1)).Ints()
 	suite.ElementsMatch([]int{1, 2}, out)
+}
+
+func (suite *TestFPTestSuite) TestInteractWithNil() {
+	slice1 := []int{1, 2, 3, 4}
+	out := StreamOf(slice1).Interact(newNilStream()).Ints()
+	suite.Len(out, 0)
+
+	out = StreamOf(slice1).InteractBy(newNilStream(), func(int) int { return 0 }).Ints()
+	suite.Len(out, 0)
+}
+
+func (suite *TestFPTestSuite) TestMustResetResultSlice() {
+	src := []string{"a", "b", "c"}
+	StreamOf(src).Map(strings.ToUpper).ToSlice(&src)
+	suite.ElementsMatch([]string{"A", "B", "C"}, src)
+
+	src = []string{"a", "b", "c"}
+	StreamOf(src).Map(strings.ToUpper).Interact(newNilStream()).ToSlice(&src)
+	suite.Len(src, 0)
+}
+
+func (suite *TestFPTestSuite) TestAddToNilStream() {
+	out := newNilStream().Append("a").Strings()
+	suite.Equal([]string{"a"}, out)
+	out = newNilStream().Prepend("a").Strings()
+	suite.Equal([]string{"a"}, out)
 }
 
 func (suite *TestFPTestSuite) TestInteractBy() {
@@ -875,6 +993,13 @@ func (suite *TestFPTestSuite) TestZip() {
 	suite.Nil(out)
 }
 
+func (suite *TestFPTestSuite) TestZipNil() {
+	out := StreamOf([]string{"1"}).Zip(newNilStream(), func(string, string) string {
+		return ""
+	}).Strings()
+	suite.Len(out, 0)
+}
+
 func (suite *TestFPTestSuite) TestZipN() {
 	slice1 := []int{1, 2, 3}
 	slice2 := []int{4, 5, 6, 7}
@@ -889,6 +1014,15 @@ func (suite *TestFPTestSuite) TestZipN() {
 		return strconv.FormatInt(int64(i+j+k), 10)
 	}, StreamOf(slice2), StreamOf(slice3)).Strings()
 	suite.Nil(out)
+}
+
+func (suite *TestFPTestSuite) TestZipNWithNil() {
+	slice1 := []int{1, 2, 3}
+	slice2 := []int{4, 5, 6, 7}
+	out := StreamOf(slice1).ZipN(func(i, j, k int) string {
+		return strconv.FormatInt(int64(i+j+k), 10)
+	}, StreamOf(slice2), newNilStream()).Strings()
+	suite.Len(out, 0)
 }
 
 func (suite *TestFPTestSuite) TestZipN1() {
@@ -1310,4 +1444,23 @@ func (suite *TestFPTestSuite) TestReduceHelper() {
 
 	suite.Equal(uint16(1), MinUint16(2, 1))
 	suite.Equal(uint16(0), MinUint16(0, 2))
+}
+
+func (suite *TestFPTestSuite) TestReduceNilStream() {
+	out := newNilStream().Reduce(100, func(int, int) int {
+		return 0
+	}).Int()
+	suite.Equal(100, out)
+}
+
+func (suite *TestFPTestSuite) TestReduce0NilStream() {
+	out := newNilStream().Reduce0(func(int, int) int {
+		return 0
+	}).Int()
+	suite.Equal(0, out)
+
+	_, ok := newNilStream().Reduce0(func(int, int) int {
+		return 0
+	}).Result().(int)
+	suite.True(ok)
 }

@@ -107,3 +107,16 @@ func (suite *KVStreamTestSuite) TestToNil() {
 	suite.Equal(map[string]int{}, mp)
 	suite.NotNil(mp)
 }
+
+func (suite *KVStreamTestSuite) TestToCantBeNil() {
+	var mp map[string]int
+	newNilStream().ToSet().To(&mp)
+	suite.Equal(map[string]int{}, mp)
+	suite.NotNil(mp)
+}
+
+func (suite *KVStreamTestSuite) TestToNilStream() {
+	var out []string
+	newNilKVStream().Values().Filter(func(s string) bool { return true }).ToSlice(&out)
+	suite.Len(out, 0)
+}

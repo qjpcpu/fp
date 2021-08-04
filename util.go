@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	boolType = reflect.TypeOf(true)
-	errType  = reflect.TypeOf((*error)(nil)).Elem()
+	boolType   = reflect.TypeOf(true)
+	errType    = reflect.TypeOf((*error)(nil)).Elem()
+	streamType = reflect.TypeOf((*Stream)(nil)).Elem()
 )
 
 func NoError() func(error) bool {
