@@ -529,6 +529,27 @@ func (suite *TestFPTestSuite) TestDeepFlatten2() {
 	suite.Equal([]string{"db1.table1", "db1.table2", "db2.table1", "db2.table2"}, fullnames)
 }
 
+func (suite *TestFPTestSuite) TestDeepFlatten3() {
+	databases := []string{"db1", "db2", "db3"}
+	tables := []string{"table1", "table2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) (out []TupleString) {
+		if db == "db2" {
+			var ts []string
+			StreamOf(ts).Map(func(table string) TupleString {
+				return TupleStringOf(db, table)
+			}).ToSlice(&out)
+			return
+		}
+		StreamOf(tables).Map(func(table string) TupleString {
+			return TupleStringOf(db, table)
+		}).ToSlice(&out)
+		return
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Equal([]string{"db1.table1", "db1.table2", "db3.table1", "db3.table2"}, fullnames)
+}
+
 func (suite *TestFPTestSuite) TestFlattenInnerStream() {
 	databases := []string{"db1", "db2"}
 	tables := []string{"table1", "table2"}
@@ -540,6 +561,25 @@ func (suite *TestFPTestSuite) TestFlattenInnerStream() {
 		return t.E1 + "." + t.E2
 	}).Strings()
 	suite.Equal([]string{"db1.table1", "db1.table2", "db2.table1", "db2.table2"}, fullnames)
+}
+
+func (suite *TestFPTestSuite) TestFlattenInnerStream2() {
+	databases := []string{"db1", "db2", "db3"}
+	tables := []string{"table1", "table2"}
+	fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+		if db == "db2" {
+			var ts []string
+			return StreamOf(ts).Map(func(table string) TupleString {
+				return TupleStringOf(db, table)
+			})
+		}
+		return StreamOf(tables).Map(func(table string) TupleString {
+			return TupleStringOf(db, table)
+		})
+	}).Map(func(t TupleString) string {
+		return t.E1 + "." + t.E2
+	}).Strings()
+	suite.Equal([]string{"db1.table1", "db1.table2", "db3.table1", "db3.table2"}, fullnames)
 }
 
 func (suite *TestFPTestSuite) TestFlattenInnerNilStream() {
