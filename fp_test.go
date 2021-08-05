@@ -1030,6 +1030,18 @@ func (suite *TestFPTestSuite) TestToSetBy() {
 	suite.Equal("AAA", string(out[3]))
 }
 
+func (suite *TestFPTestSuite) TestShouldGetNilStreamWhenFlatMapAEmptyStream() {
+	out := StreamOf([][]string{}).FlatMap(func(v []string) Stream { return StreamOf(v) })
+	suite.True(isNilStream(out))
+}
+
+func (suite *TestFPTestSuite) TestShouldGetNilStreamWhenFlattenEmptyStream() {
+	out := StreamOf([]string{}).Map(func(v string) Stream {
+		return StreamOf([]string{"a"})
+	}).Flatten()
+	suite.True(isNilStream(out))
+}
+
 func (suite *TestFPTestSuite) TestZip() {
 	slice1 := []int{1, 2, 3}
 	slice2 := []int{4, 5, 6, 7}
