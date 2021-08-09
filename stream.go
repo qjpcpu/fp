@@ -119,6 +119,10 @@ func StreamOf(arr interface{}) Stream {
 	return newStream(elemTyp, it)
 }
 
+func Stream0Of(arr ...interface{}) Stream {
+	return StreamOf(arr[0])
+}
+
 func StreamOfSource(s Source) Stream {
 	return newStream(s.ElemType(), s.Next)
 }
