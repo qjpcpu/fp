@@ -52,6 +52,7 @@ func (ns *nilStream) Union(o Stream) Stream                                   { 
 func (ns *nilStream) ToSet() KVStream                                         { return newNilKVStream() }
 func (ns *nilStream) ToSetBy(fn interface{}) KVStream                         { return newNilKVStream() }
 func (ns *nilStream) GroupBy(fn interface{}) KVStream                         { return newNilKVStream() }
+func (ns *nilStream) Reverse() Stream                                         { return ns }
 func (ns *nilStream) Append(element ...interface{}) Stream {
 	if len(element) == 0 {
 		return ns

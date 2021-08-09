@@ -90,6 +90,8 @@ type Stream interface {
 	ZipN(fn interface{}, others ...Stream) Stream
 	// Branch to multiple output stream, should not used for unlimited stream
 	Branch(processors ...StreamProcessor)
+	// Reverse a stream
+	Reverse() Stream
 
 	// Run stream and drop value
 	Run()
@@ -115,10 +117,6 @@ type Stream interface {
 func StreamOf(arr interface{}) Stream {
 	elemTyp, it := makeIter(reflect.ValueOf(arr))
 	return newStream(elemTyp, it)
-}
-
-func Stream0Of(arr ...interface{}) Stream {
-	return StreamOf(arr[0])
 }
 
 func StreamOfSource(s Source) Stream {
@@ -456,27 +454,43 @@ func (q *stream) Sort() Stream {
 	})
 }
 
+func (q *stream) Reverse() Stream {
+	var iter iterator
+	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+		if iter == nil {
+			arr := q.getResult().Result()
+			v := reflect.ValueOf(arr)
+			idx := v.Len() - 1
+			iter = func() (reflect.Value, bool) {
+				if idx >= 0 {
+					idx--
+					return v.Index(idx + 1), true
+				}
+				return reflect.Value{}, false
+			}
+		}
+		return iter()
+	})
+}
+
 func (q *stream) Uniq() Stream {
 	var iter iterator
 	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
-			v := Value{
-				typ: reflect.SliceOf(q.expectElemTyp),
-				val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
-			}
 			dup := make(map[interface{}]struct{})
-			for {
-				val, ok := q.iter()
-				if !ok {
-					break
+			iter = func() (reflect.Value, bool) {
+				for {
+					val, ok := q.iter()
+					if !ok {
+						return val, false
+					}
+					key := val.Interface()
+					if _, ok := dup[key]; !ok {
+						dup[key] = struct{}{}
+						return val, true
+					}
 				}
-				key := val.Interface()
-				if _, ok := dup[key]; !ok {
-					v.val = reflect.Append(v.val, val)
-				}
-				dup[key] = struct{}{}
 			}
-			_, iter = makeIter(v.val)
 		}
 		return iter()
 	})
@@ -631,24 +645,21 @@ func (q *stream) UniqBy(fn interface{}) Stream {
 	var iter iterator
 	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
-			v := Value{
-				typ: reflect.SliceOf(q.expectElemTyp),
-				val: reflect.Zero(reflect.SliceOf(q.expectElemTyp)),
-			}
 			getKey := reflect.ValueOf(fn)
 			dup := make(map[interface{}]struct{})
-			for {
-				val, ok := q.iter()
-				if !ok {
-					break
+			iter = func() (reflect.Value, bool) {
+				for {
+					val, ok := q.iter()
+					if !ok {
+						return val, false
+					}
+					key := getKey.Call([]reflect.Value{val})[0].Interface()
+					if _, ok := dup[key]; !ok {
+						dup[key] = struct{}{}
+						return val, true
+					}
 				}
-				key := getKey.Call([]reflect.Value{val})[0].Interface()
-				if _, ok := dup[key]; !ok {
-					v.val = reflect.Append(v.val, val)
-				}
-				dup[key] = struct{}{}
 			}
-			_, iter = makeIter(v.val)
 		}
 		return iter()
 	})

@@ -1030,6 +1030,12 @@ func (suite *TestFPTestSuite) TestToSetBy() {
 	suite.Equal("AAA", string(out[3]))
 }
 
+func (suite *TestFPTestSuite) TestReverse() {
+	slice := []string{"a", "b", "c"}
+	out := StreamOf(slice).Reverse().Strings()
+	suite.Equal([]string{"c", "b", "a"}, out)
+}
+
 func (suite *TestFPTestSuite) TestShouldGetNilStreamWhenFlatMapAEmptyStream() {
 	out := StreamOf([][]string{}).FlatMap(func(v []string) Stream { return StreamOf(v) })
 	suite.True(isNilStream(out))
@@ -1244,11 +1250,6 @@ func (suite *TestFPTestSuite) TestFirstToSuccess() {
 	suite.False(success)
 }
 
-func (suite *TestFPTestSuite) TestStream0() {
-	get := func() ([]string, error) { return []string{"a", "b"}, nil }
-	out := Stream0Of(get()).Strings()
-	suite.Equal([]string{"a", "b"}, out)
-}
 
 func (suite *TestFPTestSuite) TestEqual() {
 	slice := []int{1, 2, 3, 4}
@@ -1574,6 +1575,7 @@ func (suite *TestFPTestSuite) TestNilStreamXXX() {
 	suite.Nil(newNilStream().Int32s())
 	suite.Nil(newNilStream().Uint32s())
 	suite.Nil(newNilStream().Uint64s())
+	suite.Nil(newNilStream().Reverse().Uint64s())
 	suite.Nil(newNilStream().Uints())
 	suite.Equal("", newNilStream().JoinStrings(","))
 	suite.NotPanics(func() {
