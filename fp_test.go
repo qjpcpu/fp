@@ -1250,7 +1250,6 @@ func (suite *TestFPTestSuite) TestFirstToSuccess() {
 	suite.False(success)
 }
 
-
 func (suite *TestFPTestSuite) TestEqual() {
 	slice := []int{1, 2, 3, 4}
 
@@ -1584,6 +1583,10 @@ func (suite *TestFPTestSuite) TestNilStreamXXX() {
 	})
 }
 
+func (suite *TestFPTestSuite) TestStream0() {
+	fn := func() ([]string, error) { return []string{"a"}, nil }
+	suite.Equal([]string{"a"}, Stream0Of(fn()).Strings())
+}
 func (suite *TestFPTestSuite) TestKVNilStreamXXX() {
 	suite.Zero(newNilKVStream().Foreach(func(string, string) {}).Size())
 	suite.Zero(newNilKVStream().Map(func(string, string) (string, string) { return "", "" }).Size())
