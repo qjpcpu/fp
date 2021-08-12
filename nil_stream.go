@@ -101,6 +101,7 @@ func (ks *nilkvStream) Keys() Stream                    { return newNilStream() 
 func (ks *nilkvStream) Values() Stream                  { return newNilStream() }
 func (ks *nilkvStream) Size() int                       { return 0 }
 func (ks *nilkvStream) Result() interface{}             { return nil }
+func (ks *nilkvStream) Run()                            {}
 func (ks *nilkvStream) To(dstPtr interface{}) bool {
 	val := reflect.ValueOf(dstPtr)
 	if !val.Elem().IsValid() || val.Elem().IsNil() {

@@ -120,3 +120,22 @@ func (suite *KVStreamTestSuite) TestToNilStream() {
 	newNilKVStream().Values().Filter(func(s string) bool { return true }).ToSlice(&out)
 	suite.Len(out, 0)
 }
+
+func (suite *KVStreamTestSuite) TestLazy() {
+	src := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	var cnt int
+	q := KVStreamOf(src).Reject(func(k string, v int) bool {
+		return k == "c"
+	}).Filter(func(k string, v int) bool {
+		return k == "a"
+	}).Foreach(func(k string, v int) {
+		cnt++
+	})
+	suite.Zero(cnt)
+	q.Run()
+	suite.Equal(1, cnt)
+}

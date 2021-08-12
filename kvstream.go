@@ -28,6 +28,8 @@ type KVStream interface {
 	Size() int
 	// Result of map
 	Result() interface{}
+	// Run stream
+	Run()
 	// To dst ptr
 	To(dstPtr interface{}) bool
 }
@@ -188,6 +190,10 @@ func (obj *kvStream) Values() Stream {
 
 func (l *kvStream) Result() interface{} {
 	return l.getRelut().Result()
+}
+
+func (l *kvStream) Run() {
+	_ = l.Result()
 }
 
 func (l *kvStream) To(ptr interface{}) bool {
