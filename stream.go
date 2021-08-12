@@ -1164,17 +1164,22 @@ func repeatableIter(iter iterator, f func(reflect.Value) bool) iterator {
 	if iter == nil {
 		return nil
 	}
-	val, ok := iter()
-	if !ok {
-		return iter
+	var vals []reflect.Value
+	for {
+		val, ok := iter()
+		if !ok {
+			break
+		}
+		vals = append(vals, val)
+		if !f(val) {
+			break
+		}
 	}
-	if f(val) {
-		iter = repeatableIter(iter, f)
-	}
-	var flag int32
+	var i int
 	return func() (reflect.Value, bool) {
-		if atomic.CompareAndSwapInt32(&flag, 0, 1) {
-			return val, true
+		for i < len(vals) {
+			i++
+			return vals[i-1], true
 		}
 		return iter()
 	}
