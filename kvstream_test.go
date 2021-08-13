@@ -2,6 +2,7 @@ package fp
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -138,4 +139,35 @@ func (suite *KVStreamTestSuite) TestLazy() {
 	suite.Zero(cnt)
 	q.Run()
 	suite.Equal(1, cnt)
+}
+
+type MyMap map[string]string
+
+func (suite *KVStreamTestSuite) TestNilInputMap() {
+	var mm MyMap
+	var ret map[string]string
+	KVStreamOf(mm).To(&ret)
+	suite.NotNil(ret)
+
+	var mm1 map[string]string
+	var ret1 map[string]string
+	KVStreamOf(mm1).To(&ret1)
+	suite.NotNil(ret1)
+}
+
+func (suite *KVStreamTestSuite) TestTypedMap() {
+	mm := MyMap{"a": "b"}
+	var ret map[string]string
+	KVStreamOf(mm).Map(func(k, v string) (string, string) {
+		return strings.ToUpper(k), strings.ToUpper(v)
+	}).To(&ret)
+	suite.Equal(map[string]string{"A": "B"}, ret)
+
+	mm1 := MyMap{"a": "b"}
+	var ret1 MyMap
+	KVStreamOf(mm1).Map(func(k, v string) (string, string) {
+		return strings.ToUpper(k), strings.ToUpper(v)
+	}).To(&ret1)
+	suite.Equal(MyMap(map[string]string{"A": "B"}), ret1)
+
 }
