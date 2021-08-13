@@ -10,7 +10,7 @@ import (
 )
 
 type Stream interface {
-	// Map stream to another, fn should be func(element_type) another_type
+	// Map stream to another, fn should be func(element_type) (another_type,&optional error/bool)
 	Map(fn interface{}) Stream
 	// FlatMap stream to another, fn should be func(element_type) another_slice_type
 	FlatMap(fn interface{}) Stream
@@ -149,12 +149,33 @@ func newStream(expTyp reflect.Type, it iterator, mws ...middleware) *stream {
 func (q *stream) Map(fn interface{}) Stream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
+	mapFn := func(in reflect.Value) (reflect.Value, bool) {
+		return fnVal.Call([]reflect.Value{in})[0], true
+	}
+	if fnTyp.NumOut() == 2 && fnTyp.Out(1) == boolType {
+		mapFn = func(in reflect.Value) (reflect.Value, bool) {
+			out := fnVal.Call([]reflect.Value{in})
+			return out[0], out[1].Bool()
+		}
+	} else if fnTyp.NumOut() == 2 && fnTyp.Out(1).ConvertibleTo(errType) {
+		mapFn = func(in reflect.Value) (reflect.Value, bool) {
+			out := fnVal.Call([]reflect.Value{in})
+			err := out[1].Interface()
+			return out[0], err == nil || err.(error) == nil
+		}
+	} else if fnTyp.NumOut() == 1 {
+	} else {
+		panic("Map function must be func(element_type) another_type or func(element_type) (another_type,error/bool), now " + fnTyp.String())
+	}
+
 	return newStream(fnTyp.Out(0), q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
-			if val, ok := next(); !ok {
-				return reflect.Value{}, false
-			} else {
-				return fnVal.Call([]reflect.Value{val})[0], true
+			for {
+				if val, ok := next(); !ok {
+					return reflect.Value{}, false
+				} else if val, ok = mapFn(val); ok {
+					return val, true
+				}
 			}
 		}
 	})
@@ -219,13 +240,6 @@ func (q *stream) ZipN(fn interface{}, others ...Stream) Stream {
 }
 
 func (q *stream) FlatMap(fn interface{}) Stream {
-	fnTyp := reflect.TypeOf(fn)
-	fnVal := reflect.ValueOf(fn)
-	if fnTyp.NumOut() == 2 && fnTyp.Out(1) == boolType {
-		return q.flatMapBoolean(fnTyp, fnVal)
-	} else if fnTyp.NumOut() == 2 && fnTyp.Out(1).ConvertibleTo(errType) {
-		return q.flatMapError(fnTyp, fnVal)
-	}
 	return q.Map(fn).Flatten()
 }
 
@@ -902,42 +916,6 @@ func (q *stream) getValue(slice reflect.Value) reflect.Value {
 		q.val = slice
 	})
 	return q.val
-}
-
-func (q *stream) flatMapBoolean(fnTyp reflect.Type, fnVal reflect.Value) *stream {
-	return newStream(fnTyp.Out(0), q.iter, func(next iterator) iterator {
-		return func() (reflect.Value, bool) {
-			for {
-				val, ok := next()
-				if !ok {
-					break
-				}
-				out := fnVal.Call([]reflect.Value{val})
-				if out[1].Bool() {
-					return out[0], true
-				}
-			}
-			return reflect.Value{}, false
-		}
-	})
-}
-
-func (q *stream) flatMapError(fnTyp reflect.Type, fnVal reflect.Value) *stream {
-	return newStream(fnTyp.Out(0), q.iter, func(next iterator) iterator {
-		return func() (reflect.Value, bool) {
-			for {
-				val, ok := next()
-				if !ok {
-					break
-				}
-				out := fnVal.Call([]reflect.Value{val})
-				if err := out[1].Interface(); err == nil || err.(error) == nil {
-					return out[0], true
-				}
-			}
-			return reflect.Value{}, false
-		}
-	})
 }
 
 func (q *stream) compare(a, b reflect.Value) int {

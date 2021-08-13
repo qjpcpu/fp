@@ -38,17 +38,17 @@ func (suite *TestFPTestSuite) TestMapString() {
 func (suite *TestFPTestSuite) TestMapSelectString() {
 	slice := []string{"a", "b", "c"}
 	var out []string
-	StreamOf(slice).FlatMap(func(e string) (string, bool) {
+	StreamOf(slice).Map(func(e string) (string, bool) {
 		return strings.ToUpper(e), e == "b"
 	}).ToSlice(&out)
 	suite.ElementsMatch(out, []string{"B"})
 
-	out = StreamOf(slice).FlatMap(func(e string) (string, bool) {
+	out = StreamOf(slice).Map(func(e string) (string, bool) {
 		return strings.ToUpper(e), e == "x"
 	}).Strings()
 	suite.ElementsMatch(out, []string{})
 
-	out = StreamOf(slice).FlatMap(func(e string) (string, bool) {
+	out = StreamOf(slice).Map(func(e string) (string, bool) {
 		return strings.ToUpper(e), e == "a" || e == "c"
 	}).Strings()
 	suite.ElementsMatch(out, []string{"A", "C"})
@@ -63,20 +63,29 @@ func (suite *TestFPTestSuite) TestFlatMapErr() {
 	}
 	slice := []string{"a", "b", "c"}
 	var out []string
-	StreamOf(slice).FlatMap(func(e string) (string, error) {
+	StreamOf(slice).Map(func(e string) (string, error) {
 		return strings.ToUpper(e), gerr(e == "a" || e == "c")
 	}).ToSlice(&out)
 	suite.ElementsMatch(out, []string{"B"})
 
-	out = StreamOf(slice).FlatMap(func(e string) (string, error) {
+	out = StreamOf(slice).Map(func(e string) (string, error) {
 		return strings.ToUpper(e), gerr(true)
 	}).Strings()
 	suite.ElementsMatch(out, []string{})
 
-	out = StreamOf(slice).FlatMap(func(e string) (string, error) {
+	out = StreamOf(slice).Map(func(e string) (string, error) {
 		return strings.ToUpper(e), gerr(e == "b")
 	}).Strings()
 	suite.ElementsMatch(out, []string{"A", "C"})
+}
+
+func (suite *TestFPTestSuite) TestMapFunctionValidate() {
+	suite.Panics(func() {
+		StreamOf([]string{}).Map(func(int) (int, string) { return 1, "" })
+	})
+	suite.Panics(func() {
+		StreamOf([]string{}).Map(func(int) (int, int, int) { return 1, 1, 1 })
+	})
 }
 
 func (suite *TestFPTestSuite) TestRepeatableGetValueMapString() {
@@ -1117,7 +1126,7 @@ func (suite *TestFPTestSuite) TestFullLazy() {
 	q := StreamOf([]int{1, 2, 3, 4}).Map(func(i int) int {
 		count++
 		return i
-	}).FlatMap(func(i int) (int, bool) {
+	}).Map(func(i int) (int, bool) {
 		count++
 		return i, true
 	}).ToSetBy(func(i int) int {
