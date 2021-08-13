@@ -95,6 +95,22 @@ slice := []string{"a", "b", "c"}
 var out []string
 StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
 suite.ElementsMatch(out, []string{"A", "B", "C"})
+
+// map with selector
+slice := []string{"a", "b", "c"}
+var out []string
+StreamOf(slice).Map(func(e string) (string, bool) {
+	return strings.ToUpper(e), e == "b"
+}).ToSlice(&out)
+suite.ElementsMatch(out, []string{"B"})
+
+// map without error
+slice := []string{"a", "b", "c"}
+var out []string
+StreamOf(slice).Map(func(e string) (string, error) {
+	return strings.ToUpper(e), genErr(e == "a" || e == "c")
+}).ToSlice(&out)
+suite.ElementsMatch(out, []string{"B"})
 #+end_src
 
 *** FlatMap
@@ -106,6 +122,18 @@ out := StreamOf(slice).FlatMap(func(s string) []byte {
 	return []byte(s)
 }).Bytes()
 suite.Equal("abcdef", string(out))
+
+// flatmap sub stream
+databases := []string{"db1", "db2"}
+tables := []string{"table1", "table2"}
+fullnames := StreamOf(databases).FlatMap(func(db string) Stream {
+	return StreamOf(tables).Map(func(table string) TupleString {
+		return TupleStringOf(db, table)
+	})
+}).Map(func(t TupleString) string {
+	return t.E1 + "." + t.E2
+}).Strings()
+suite.Equal([]string{"db1.table1", "db1.table2", "db2.table1", "db2.table2"}, fullnames)
 #+end_src
 
 *** Filter
