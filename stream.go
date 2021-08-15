@@ -12,7 +12,7 @@ import (
 type Stream interface {
 	// Map stream to another, fn should be func(element_type) (another_type,&optional error/bool)
 	Map(fn interface{}) Stream
-	// FlatMap stream to another, fn should be func(element_type) another_slice_type
+	// FlatMap stream to another, fn should be func(element_type) slice_type
 	FlatMap(fn interface{}) Stream
 	// Filter stream, fn should be func(element_type) bool
 	Filter(fn interface{}) Stream
@@ -78,7 +78,7 @@ type Stream interface {
 	ToSet() KVStream
 	// ToSet by func(element_type) any_type or func(element_type) (key_type,val_type)
 	ToSetBy(fn interface{}) KVStream
-	// GroupBy func(element_type) any_type, this is an aggregate op, so it would block stream
+	// GroupBy func(element_type) any_type, result is a kv set (any_type: [element_type]), this is an aggregate op, so it would block stream
 	GroupBy(fn interface{}) KVStream
 	// Append element
 	Append(element ...interface{}) Stream
