@@ -63,20 +63,61 @@ func (suite *TestFPTestSuite) TestFlatMapErr() {
 	}
 	slice := []string{"a", "b", "c"}
 	var out []string
-	StreamOf(slice).Map(func(e string) (string, error) {
+	err := StreamOf(slice).Map(func(e string) (string, error) {
 		return strings.ToUpper(e), gerr(e == "a" || e == "c")
 	}).ToSlice(&out)
-	suite.ElementsMatch(out, []string{"B"})
+	suite.Len(out, 0)
+	suite.Error(err)
 
 	out = StreamOf(slice).Map(func(e string) (string, error) {
 		return strings.ToUpper(e), gerr(true)
 	}).Strings()
 	suite.ElementsMatch(out, []string{})
 
-	out = StreamOf(slice).Map(func(e string) (string, error) {
+	err = StreamOf(slice).Map(func(e string) (string, error) {
 		return strings.ToUpper(e), gerr(e == "b")
-	}).Strings()
-	suite.ElementsMatch(out, []string{"A", "C"})
+	}).ToSlice(&out)
+	suite.ElementsMatch(out, []string{"A"})
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestErrPassing() {
+	gerr := func(c bool) error {
+		if c {
+			return errors.New("ERR")
+		}
+		return nil
+	}
+	slice := []string{"a", "b", "c"}
+	var out []string
+	err := StreamOf(slice).Map(func(e string) (string, error) {
+		return strings.ToUpper(e), gerr(e == "b")
+	}).Map(func(e string) byte {
+		v := []byte(e)
+		return v[0]
+	}).ToSetBy(func(s byte) (string, int) {
+		return string([]byte{s + 1}), int(s)
+	}).Keys().ToSlice(&out)
+	suite.ElementsMatch(out, []string{"B"})
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestFlatMapErrPassing() {
+	gerr := func(c bool) error {
+		if c {
+			return errors.New("ERR")
+		}
+		return nil
+	}
+	slice := []string{"a", "b", "c"}
+	var out []string
+	err := StreamOf(slice).FlatMap(func(e string) ([]byte, error) {
+		return []byte(strings.ToUpper(e)), gerr(e == "b")
+	}).ToSetBy(func(s byte) (string, int) {
+		return string([]byte{s + 1}), int(s)
+	}).Keys().ToSlice(&out)
+	suite.ElementsMatch(out, []string{"B"})
+	suite.Error(err)
 }
 
 func (suite *TestFPTestSuite) TestMapFunctionValidate() {
@@ -1331,7 +1372,7 @@ func (suite *TestFPTestSuite) TestZipnFuncCheck() {
 }
 
 func (suite *TestFPTestSuite) TestStreamMustHaveIterator() {
-	s := newStream(reflect.TypeOf(1), nil)
+	s := newStream(nil, reflect.TypeOf(1), nil)
 	suite.NotNil(s.iter)
 	_, v := s.iter()
 	suite.False(v)
@@ -1736,4 +1777,66 @@ func (suite *TestFPTestSuite) TestHorriableFlattenWithAllNilStream() {
 		newNilStream(),
 	}).Flatten().Flatten().Flatten().JoinStrings("")
 	suite.Equal(``, out)
+}
+
+func (suite *TestFPTestSuite) TestNewStreamWithErr() {
+	err := errors.New("x")
+	ctx := newCtx(nil)
+	ctx.SetErr(err)
+	it := func() (reflect.Value, bool) {
+		return reflect.ValueOf(1), true
+	}
+	s := newStream(ctx, reflect.TypeOf(1), it)
+	var out []int
+	err = s.ToSlice(&out)
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestMapMapError() {
+	slice := []string{"a", "b"}
+	var out []string
+	err := StreamOf(slice).Map(func(s string) (string, error) {
+		if s == "b" {
+			return s, errors.New(s)
+		}
+		return s, nil
+	}).Map(func(s string) string {
+		return s
+	}).ToSlice(&out)
+	suite.ElementsMatch(out, []string{"a"})
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestMapMapFilterToSetByTo() {
+	slice := []string{"a", "b", "c", "d"}
+	var mp map[string]string
+	err0 := StreamOf(slice).Map(func(s string) string {
+		return strings.ToUpper(s)
+	}).Map(func(s string) (string, error) {
+		var err error
+		if s == "C" {
+			err = errors.New("x")
+		}
+		return s + "_1", err
+	}).Filter(func(s string) bool {
+		return strings.Contains(s, "B")
+	}).ToSetBy(func(s string) string {
+		return s
+	}).To(&mp)
+
+	suite.Equal(mp, map[string]string{"B_1": "B_1"})
+	suite.Error(err0)
+
+	err0 = StreamOf(slice).Map(func(s string) string {
+		return strings.ToUpper(s)
+	}).Map(func(s string) (string, error) {
+		return s + "_1", nil
+	}).Filter(func(s string) bool {
+		return strings.Contains(s, "B")
+	}).ToSetBy(func(s string) string {
+		return s
+	}).To(&mp)
+
+	suite.Equal(mp, map[string]string{"B_1": "B_1"})
+	suite.NoError(err0)
 }

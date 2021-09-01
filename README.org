@@ -96,13 +96,14 @@ StreamOf(slice).Map(func(e string) (string, bool) {
 }).ToSlice(&out)
 suite.ElementsMatch(out, []string{"B"})
 
-// map without error
+// map with error
 slice := []string{"a", "b", "c"}
 var out []string
-StreamOf(slice).Map(func(e string) (string, error) {
+err := StreamOf(slice).Map(func(e string) (string, error) {
 	return strings.ToUpper(e), genErr(e == "a" || e == "c")
 }).ToSlice(&out)
-suite.ElementsMatch(out, []string{"B"})
+suite.Len(out, 0)
+suite.Error(err)
 #+end_src
 
 *** FlatMap
@@ -458,11 +459,3 @@ StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
 suite.ElementsMatch(out, []string{"A", "B", "C"})
 #+end_src
 
-*** Result
-
-#+begin_src go
-slice := []string{"a", "b", "c"}
-q := StreamOf(slice).Map(strings.ToUpper)
-out := q.Result().([]string)
-suite.ElementsMatch(out, []string{"A", "B", "C"})
-#+end_src

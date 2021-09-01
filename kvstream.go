@@ -31,12 +31,13 @@ type KVStream interface {
 	// Run stream
 	Run()
 	// To dst ptr
-	To(dstPtr interface{}) bool
+	To(dstPtr interface{}) error
 }
 
 type kvStream struct {
 	getMap           func() reflect.Value
 	keyType, valType reflect.Type
+	ctx              context
 }
 
 func KVStreamOf(m interface{}) KVStream {
@@ -47,14 +48,14 @@ func KVStreamOf(m interface{}) KVStream {
 		panic("argument should be map")
 	}
 	tp := reflect.TypeOf(m)
-	return newKvStream(tp.Key(), tp.Elem(), func() reflect.Value {
+	return newKvStream(nil, tp.Key(), tp.Elem(), func() reflect.Value {
 		return reflect.ValueOf(m)
 	})
 }
 
 func KVStreamOfSource(s KVSource) KVStream {
 	keyType, valType := s.ElemType()
-	return newKvStream(keyType, valType, func() reflect.Value {
+	return newKvStream(nil, keyType, valType, func() reflect.Value {
 		table := reflect.MakeMap(reflect.MapOf(keyType, valType))
 		for {
 			if k, v, ok := s.Next(); ok {
@@ -70,7 +71,7 @@ func KVStreamOfSource(s KVSource) KVStream {
 func (obj *kvStream) Foreach(fn interface{}) KVStream {
 	fnVal := reflect.ValueOf(fn)
 	getMap := obj.getMap
-	return newKvStream(obj.keyType, obj.valType, func() reflect.Value {
+	return newKvStream(newCtx(obj.ctx), obj.keyType, obj.valType, func() reflect.Value {
 		mp := getMap()
 		iter := mp.MapRange()
 		for iter.Next() {
@@ -84,7 +85,7 @@ func (obj *kvStream) Map(fn interface{}) KVStream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	getMap := obj.getMap
-	return newKvStream(fnTyp.Out(0), fnTyp.Out(1), func() reflect.Value {
+	return newKvStream(newCtx(obj.ctx), fnTyp.Out(0), fnTyp.Out(1), func() reflect.Value {
 		iter := getMap().MapRange()
 		table := reflect.MakeMap(reflect.MapOf(fnTyp.Out(0), fnTyp.Out(1)))
 		for iter.Next() {
@@ -99,7 +100,7 @@ func (obj *kvStream) FlatMap(fn interface{}) Stream {
 	fnVal := reflect.ValueOf(fn)
 	var iter *reflect.MapIter
 	var done bool
-	return newStream(fnVal.Type().Out(0), func() (reflect.Value, bool) {
+	return newStream(newCtx(obj.ctx), fnVal.Type().Out(0), func() (reflect.Value, bool) {
 		if iter == nil {
 			iter = obj.getMap().MapRange()
 		}
@@ -115,7 +116,7 @@ func (obj *kvStream) FlatMap(fn interface{}) Stream {
 // Filter kv pair
 func (obj *kvStream) Filter(fn interface{}) KVStream {
 	fnVal := reflect.ValueOf(fn)
-	return newKvStream(obj.keyType, obj.valType, func() reflect.Value {
+	return newKvStream(newCtx(obj.ctx), obj.keyType, obj.valType, func() reflect.Value {
 		table := reflect.MakeMap(reflect.MapOf(obj.keyType, obj.valType))
 		iter := obj.getMap().MapRange()
 		for iter.Next() {
@@ -131,7 +132,7 @@ func (obj *kvStream) Filter(fn interface{}) KVStream {
 // Reject kv pair
 func (obj *kvStream) Reject(fn interface{}) KVStream {
 	fnVal := reflect.ValueOf(fn)
-	return newKvStream(obj.keyType, obj.valType, func() reflect.Value {
+	return newKvStream(newCtx(obj.ctx), obj.keyType, obj.valType, func() reflect.Value {
 		table := reflect.MakeMap(reflect.MapOf(obj.keyType, obj.valType))
 		iter := obj.getMap().MapRange()
 		for iter.Next() {
@@ -160,7 +161,7 @@ func (obj *kvStream) Contains(key interface{}) bool {
 func (obj *kvStream) Keys() Stream {
 	var iter *reflect.MapIter
 	var done bool
-	return newStream(obj.keyType, func() (reflect.Value, bool) {
+	return newStream(newCtx(obj.ctx), obj.keyType, func() (reflect.Value, bool) {
 		if iter == nil {
 			iter = obj.getMap().MapRange()
 		}
@@ -176,7 +177,7 @@ func (obj *kvStream) Keys() Stream {
 func (obj *kvStream) Values() Stream {
 	var iter *reflect.MapIter
 	var done bool
-	return newStream(obj.valType, func() (reflect.Value, bool) {
+	return newStream(newCtx(obj.ctx), obj.valType, func() (reflect.Value, bool) {
 		if iter == nil {
 			iter = obj.getMap().MapRange()
 		}
@@ -196,8 +197,9 @@ func (l *kvStream) Run() {
 	_ = l.Result()
 }
 
-func (l *kvStream) To(ptr interface{}) bool {
-	return l.getRelut().To(ptr)
+func (l *kvStream) To(ptr interface{}) error {
+	l.getRelut().To(ptr)
+	return l.ctx.Err()
 }
 
 func (l *kvStream) getRelut() Value {
@@ -216,8 +218,16 @@ func (obj *kvStream) Size() int {
 	return obj.getMap().Len()
 }
 
-func newKvStream(k, v reflect.Type, getmp func() reflect.Value) *kvStream {
-	return &kvStream{keyType: k, valType: v, getMap: getMapOnce(getmp)}
+func newKvStream(ctx context, k, v reflect.Type, getmp func() reflect.Value) *kvStream {
+	if ctx == nil {
+		ctx = newCtx(nil)
+	}
+	if ctx.Err() != nil {
+		getmp = func() reflect.Value {
+			return reflect.MakeMap(reflect.MapOf(k, v))
+		}
+	}
+	return &kvStream{ctx: ctx, keyType: k, valType: v, getMap: getMapOnce(getmp)}
 }
 
 func getMapOnce(f func() reflect.Value) func() reflect.Value {

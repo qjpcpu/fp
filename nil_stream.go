@@ -69,11 +69,12 @@ func (ns *nilStream) Zip(other Stream, fn interface{}) Stream      { return ns }
 func (ns *nilStream) ZipN(fn interface{}, others ...Stream) Stream { return ns }
 func (ns *nilStream) Branch(processors ...StreamProcessor)         {}
 func (ns *nilStream) Run()                                         {}
-func (ns *nilStream) ToSlice(ptr interface{}) {
+func (ns *nilStream) ToSlice(ptr interface{}) error {
 	val := reflect.ValueOf(ptr)
 	if elem := val.Elem(); elem.IsValid() && elem.Len() > 0 {
 		elem.SetLen(0)
 	}
+	return nil
 }
 func (ns *nilStream) Result() interface{}           { return nil }
 func (ns *nilStream) Strings() []string             { return nil }
@@ -102,12 +103,12 @@ func (ks *nilkvStream) Values() Stream                  { return newNilStream() 
 func (ks *nilkvStream) Size() int                       { return 0 }
 func (ks *nilkvStream) Result() interface{}             { return nil }
 func (ks *nilkvStream) Run()                            {}
-func (ks *nilkvStream) To(dstPtr interface{}) bool {
+func (ks *nilkvStream) To(dstPtr interface{}) error {
 	val := reflect.ValueOf(dstPtr)
 	if !val.Elem().IsValid() || val.Elem().IsNil() {
 		val.Elem().Set(reflect.MakeMap(val.Elem().Type()))
 	}
-	return false
+	return nil
 }
 
 type nilSource struct{}

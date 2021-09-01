@@ -1,7 +1,9 @@
 package fp
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -170,4 +172,15 @@ func (suite *KVStreamTestSuite) TestTypedMap() {
 	}).To(&ret1)
 	suite.Equal(MyMap(map[string]string{"A": "B"}), ret1)
 
+}
+
+func (suite *KVStreamTestSuite) TestWithError() {
+	ctx := newCtx(nil)
+	ctx.SetErr(errors.New(""))
+	s := newKvStream(ctx, boolType, boolType, func() reflect.Value { return reflect.Value{} })
+	var mp map[bool]bool
+	err := s.To(&mp)
+	suite.Len(mp, 0)
+	suite.NotNil(mp)
+	suite.Error(err)
 }

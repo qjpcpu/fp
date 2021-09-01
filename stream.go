@@ -96,7 +96,7 @@ type Stream interface {
 	// Run stream and drop value
 	Run()
 	// ToSlice ptr
-	ToSlice(ptr interface{})
+	ToSlice(ptr interface{}) error
 	// Result of stream
 	Result() interface{}
 	// shortcuts
@@ -116,7 +116,7 @@ type Stream interface {
 
 func StreamOf(arr interface{}) Stream {
 	elemTyp, it := makeIter(reflect.ValueOf(arr))
-	return newStream(elemTyp, it)
+	return newStream(nil, elemTyp, it)
 }
 
 func Stream0Of(arr ...interface{}) Stream {
@@ -124,7 +124,7 @@ func Stream0Of(arr ...interface{}) Stream {
 }
 
 func StreamOfSource(s Source) Stream {
-	return newStream(s.ElemType(), s.Next)
+	return newStream(nil, s.ElemType(), s.Next)
 }
 
 type StreamProcessor func(Stream)
@@ -134,21 +134,30 @@ type stream struct {
 	iter          iterator
 	val           reflect.Value
 	getValOnce    sync.Once
+	ctx           context
 }
 
-func newStream(expTyp reflect.Type, it iterator, mws ...middleware) *stream {
+func newStream(ctx context, expTyp reflect.Type, it iterator, mws ...middleware) *stream {
 	if it == nil {
 		it = func() (reflect.Value, bool) { return reflect.Value{}, false }
 	}
-	for i := range mws {
-		it = mws[i](it)
+	if ctx == nil {
+		ctx = newCtx(ctx)
 	}
-	return &stream{expectElemTyp: expTyp, iter: it}
+	if ctx.Err() != nil {
+		it = func() (reflect.Value, bool) { return reflect.Value{}, false }
+	} else {
+		for i := range mws {
+			it = mws[i](it)
+		}
+	}
+	return &stream{expectElemTyp: expTyp, iter: it, ctx: ctx}
 }
 
 func (q *stream) Map(fn interface{}) Stream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
+	ctx := newCtx(q.ctx)
 	mapFn := func(in reflect.Value) (reflect.Value, bool) {
 		return fnVal.Call([]reflect.Value{in})[0], true
 	}
@@ -161,6 +170,9 @@ func (q *stream) Map(fn interface{}) Stream {
 		mapFn = func(in reflect.Value) (reflect.Value, bool) {
 			out := fnVal.Call([]reflect.Value{in})
 			err := out[1].Interface()
+			if err != nil && err.(error) != nil {
+				ctx.SetErr(err.(error))
+			}
 			return out[0], err == nil || err.(error) == nil
 		}
 	} else if fnTyp.NumOut() == 1 {
@@ -168,13 +180,15 @@ func (q *stream) Map(fn interface{}) Stream {
 		panic("Map function must be func(element_type) another_type or func(element_type) (another_type,error/bool), now " + fnTyp.String())
 	}
 
-	return newStream(fnTyp.Out(0), q.iter, func(next iterator) iterator {
+	return newStream(ctx, fnTyp.Out(0), q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
 			for {
 				if val, ok := next(); !ok {
 					return reflect.Value{}, false
 				} else if val, ok = mapFn(val); ok {
 					return val, true
+				} else if ctx.Err() != nil {
+					return val, false
 				}
 			}
 		}
@@ -188,7 +202,7 @@ func (q *stream) Zip(other Stream, fn interface{}) Stream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	onext := other.ToSource().Next
-	return newStream(fnTyp.Out(0), q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), fnTyp.Out(0), q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
 			if val1, ok1 := next(); ok1 {
 				if val2, ok2 := onext(); ok2 {
@@ -212,7 +226,7 @@ func (q *stream) ZipN(fn interface{}, others ...Stream) Stream {
 		panic(fmt.Sprintf("zip function must have %v input param", len(others)+1))
 	}
 
-	return newStream(fnTyp.Out(0), q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), fnTyp.Out(0), q.iter, func(next iterator) iterator {
 		/* build iterator list */
 		var iteratorList []iterator
 		StreamOf(others).Map(func(s Stream) iterator {
@@ -245,7 +259,7 @@ func (q *stream) FlatMap(fn interface{}) Stream {
 
 func (q *stream) Filter(fn interface{}) Stream {
 	fnVal := reflect.ValueOf(fn)
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
 			for {
 				if val, ok := next(); !ok {
@@ -297,7 +311,7 @@ func (q *stream) Flatten() Stream {
 	} else {
 		elemType = q.expectElemTyp.Elem()
 	}
-	return newStream(elemType, q.iter, func(outernext iterator) iterator {
+	return newStream(newCtx(q.ctx), elemType, q.iter, func(outernext iterator) iterator {
 		var innernext iterator
 		var inner reflect.Value
 		return func() (item reflect.Value, ok bool) {
@@ -329,7 +343,7 @@ func (q *stream) Flatten() Stream {
 func (q *stream) Foreach(fn interface{}) Stream {
 	fnval := reflect.ValueOf(fn)
 	withIndex := fnval.Type().NumIn() == 2
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var i int
 		return func() (val reflect.Value, ok bool) {
 			if val, ok = next(); ok {
@@ -385,7 +399,7 @@ func (q *stream) Exists() bool {
 }
 
 func (q *stream) Take(size int) Stream {
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
 			if size > 0 {
 				if val, ok := next(); ok {
@@ -400,7 +414,7 @@ func (q *stream) Take(size int) Stream {
 
 func (q *stream) TakeWhile(fn interface{}) Stream {
 	fnval := reflect.ValueOf(fn)
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
 			if val, ok := next(); ok && fnval.Call([]reflect.Value{val})[0].Bool() {
 				return val, true
@@ -411,7 +425,7 @@ func (q *stream) TakeWhile(fn interface{}) Stream {
 }
 
 func (q *stream) Skip(size int) Stream {
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		return func() (reflect.Value, bool) {
 			for ; size > 0; size-- {
 				if _, ok := next(); !ok {
@@ -425,7 +439,7 @@ func (q *stream) Skip(size int) Stream {
 
 func (q *stream) SkipWhile(fn interface{}) Stream {
 	fnval := reflect.ValueOf(fn)
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var flag int32
 		return func() (reflect.Value, bool) {
 			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
@@ -455,7 +469,7 @@ func (q *stream) First() (f Value) {
 
 func (q *stream) Sort() Stream {
 	var iter iterator
-	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			arr := q.getResult().Result()
 			v := reflect.ValueOf(arr)
@@ -474,7 +488,7 @@ func (q *stream) Sort() Stream {
 
 func (q *stream) Reverse() Stream {
 	var iter iterator
-	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			arr := q.getResult().Result()
 			v := reflect.ValueOf(arr)
@@ -493,7 +507,7 @@ func (q *stream) Reverse() Stream {
 
 func (q *stream) Uniq() Stream {
 	var iter iterator
-	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			dup := make(map[interface{}]struct{})
 			iter = func() (reflect.Value, bool) {
@@ -519,7 +533,7 @@ func (q *stream) Union(other Stream) Stream {
 		return q
 	}
 	oNext := other.ToSource().Next
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var otherDone bool
 		return func() (reflect.Value, bool) {
 			if !otherDone {
@@ -630,7 +644,7 @@ func (q *stream) ToSetBy(fn interface{}) KVStream {
 		}
 	}
 	iter := q.iter
-	return newKvStream(keyTyp, valTyp, func() reflect.Value {
+	return newKvStream(newCtx(q.ctx), keyTyp, valTyp, func() reflect.Value {
 		table := reflect.MakeMap(reflect.MapOf(keyTyp, valTyp))
 		for {
 			val, ok := iter()
@@ -645,7 +659,7 @@ func (q *stream) ToSetBy(fn interface{}) KVStream {
 
 func (q *stream) ToSet() KVStream {
 	iter := q.iter
-	return newKvStream(q.expectElemTyp, boolType, func() reflect.Value {
+	return newKvStream(newCtx(q.ctx), q.expectElemTyp, boolType, func() reflect.Value {
 		table := reflect.MakeMap(reflect.MapOf(q.expectElemTyp, boolType))
 		_true := reflect.ValueOf(true)
 		for {
@@ -661,7 +675,7 @@ func (q *stream) ToSet() KVStream {
 
 func (q *stream) UniqBy(fn interface{}) Stream {
 	var iter iterator
-	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			getKey := reflect.ValueOf(fn)
 			dup := make(map[interface{}]struct{})
@@ -685,7 +699,7 @@ func (q *stream) UniqBy(fn interface{}) Stream {
 
 func (q *stream) SortBy(fn interface{}) Stream {
 	var iter iterator
-	return newStream(q.expectElemTyp, func() (reflect.Value, bool) {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			arr := q.getResult().Result()
 			v := reflect.ValueOf(arr)
@@ -739,7 +753,7 @@ func (q *stream) Partition(size int) Stream {
 	if size < 1 {
 		panic("batch size should be greater than 0")
 	}
-	return newStream(reflect.SliceOf(q.expectElemTyp), q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), reflect.SliceOf(q.expectElemTyp), q.iter, func(next iterator) iterator {
 		typ := reflect.SliceOf(q.expectElemTyp)
 		return func() (reflect.Value, bool) {
 			var slice reflect.Value
@@ -760,7 +774,7 @@ func (q *stream) Partition(size int) Stream {
 
 func (q *stream) PartitionBy(fn interface{}, includeSplittor bool) Stream {
 	fnval := reflect.ValueOf(fn)
-	return newStream(reflect.SliceOf(q.expectElemTyp), q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), reflect.SliceOf(q.expectElemTyp), q.iter, func(next iterator) iterator {
 		typ := reflect.SliceOf(q.expectElemTyp)
 		return func() (reflect.Value, bool) {
 			var slice reflect.Value
@@ -785,12 +799,13 @@ func (q *stream) PartitionBy(fn interface{}, includeSplittor bool) Stream {
 	})
 }
 
-func (q *stream) ToSlice(dst interface{}) {
+func (q *stream) ToSlice(dst interface{}) error {
 	val := reflect.ValueOf(dst)
 	if val.Kind() != reflect.Ptr {
 		panic(`fp: dst must be pointer`)
 	}
 	val.Elem().Set(q.getValue(val.Elem()))
+	return q.ctx.Err()
 }
 
 func (q *stream) GroupBy(fn interface{}) KVStream {
@@ -798,7 +813,7 @@ func (q *stream) GroupBy(fn interface{}) KVStream {
 	valTyp := reflect.SliceOf(q.expectElemTyp)
 
 	iter := q.iter
-	return newKvStream(keyTyp, valTyp, func() reflect.Value {
+	return newKvStream(newCtx(q.ctx), keyTyp, valTyp, func() reflect.Value {
 		table := reflect.MakeMap(reflect.MapOf(keyTyp, valTyp))
 		fnVal := reflect.ValueOf(fn)
 		for {
@@ -958,7 +973,7 @@ func (q *stream) compare(a, b reflect.Value) int {
 }
 
 func (q *stream) prependOne(v interface{}) *stream {
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var flag int32
 		return func() (reflect.Value, bool) {
 			if atomic.CompareAndSwapInt32(&flag, 0, 1) {
@@ -970,7 +985,7 @@ func (q *stream) prependOne(v interface{}) *stream {
 }
 
 func (q *stream) appendOne(v interface{}) *stream {
-	return newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	return newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		var flag int32
 		return func() (reflect.Value, bool) {
 			if flag == 0 {
@@ -996,7 +1011,7 @@ func (q *stream) Branch(processors ...StreamProcessor) {
 	}
 
 	slice := reflect.MakeSlice(reflect.SliceOf(q.expectElemTyp), 0, 0)
-	movingStream := newStream(q.expectElemTyp, q.iter, func(next iterator) iterator {
+	movingStream := newStream(newCtx(q.ctx), q.expectElemTyp, q.iter, func(next iterator) iterator {
 		return func() (val reflect.Value, ok bool) {
 			if val, ok = next(); ok {
 				slice = reflect.Append(slice, val)
