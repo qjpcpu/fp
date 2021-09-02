@@ -26,7 +26,7 @@ type KVStream interface {
 	Values() Stream
 	// Size of map
 	Size() int
-	// Result of map
+	// Deprecated, Result of map
 	Result() interface{}
 	// Run stream
 	Run()
