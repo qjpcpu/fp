@@ -10,9 +10,9 @@ type KVStream interface {
 	// fn should be func(key_type,element_type)
 	Foreach(fn interface{}) KVStream
 	// Map k-v pair
-	// fn should be func(key_type,element_type) (any_type,any_type)
+	// fn should be func(key_type,element_type) (any_type,any_type,&optional error)
 	Map(fn interface{}) KVStream
-	// FlatMap map to array, fn should be func(key_type,element_type) any_type
+	// FlatMap map to array, fn should be func(key_type,element_type) (any_type,&optional error)
 	FlatMap(fn interface{}) Stream
 	// Filter kv pair
 	Filter(fn interface{}) KVStream
@@ -85,11 +85,18 @@ func (obj *kvStream) Map(fn interface{}) KVStream {
 	fnTyp := reflect.TypeOf(fn)
 	fnVal := reflect.ValueOf(fn)
 	getMap := obj.getMap
-	return newKvStream(newCtx(obj.ctx), fnTyp.Out(0), fnTyp.Out(1), func() reflect.Value {
+	hasErr := fnVal.Type().NumOut() == 3 && fnVal.Type().Out(2).ConvertibleTo(errType)
+	ctx := newCtx(obj.ctx)
+	return newKvStream(ctx, fnTyp.Out(0), fnTyp.Out(1), func() reflect.Value {
 		iter := getMap().MapRange()
 		table := reflect.MakeMap(reflect.MapOf(fnTyp.Out(0), fnTyp.Out(1)))
 		for iter.Next() {
 			out := fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
+			if !hasErr {
+			} else if err := obj.asErr(out[2].Interface()); err != nil {
+				ctx.SetErr(err)
+				break
+			}
 			table.SetMapIndex(out[0], out[1])
 		}
 		return table
@@ -100,12 +107,20 @@ func (obj *kvStream) FlatMap(fn interface{}) Stream {
 	fnVal := reflect.ValueOf(fn)
 	var iter *reflect.MapIter
 	var done bool
-	return newStream(newCtx(obj.ctx), fnVal.Type().Out(0), func() (reflect.Value, bool) {
+	ctx := newCtx(obj.ctx)
+	hasErr := fnVal.Type().NumOut() == 2 && fnVal.Type().Out(1).ConvertibleTo(errType)
+	return newStream(ctx, fnVal.Type().Out(0), func() (reflect.Value, bool) {
 		if iter == nil {
 			iter = obj.getMap().MapRange()
 		}
 		if !done && iter.Next() {
 			out := fnVal.Call([]reflect.Value{iter.Key(), iter.Value()})
+			if !hasErr {
+			} else if err := obj.asErr(out[1].Interface()); err != nil {
+				ctx.SetErr(err)
+				done = true
+				return reflect.Value{}, false
+			}
 			return out[0], true
 		}
 		done = true
@@ -211,6 +226,13 @@ func (l *kvStream) getRelut() Value {
 		val.val = reflect.MakeMap(val.typ)
 	}
 	return val
+}
+
+func (obj *kvStream) asErr(out interface{}) error {
+	if out == nil {
+		return nil
+	}
+	return out.(error)
 }
 
 // Size of map

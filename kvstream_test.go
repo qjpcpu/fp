@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -182,5 +183,33 @@ func (suite *KVStreamTestSuite) TestWithError() {
 	err := s.To(&mp)
 	suite.Len(mp, 0)
 	suite.NotNil(mp)
+	suite.Error(err)
+}
+
+func (suite *KVStreamTestSuite) TestWithMapError() {
+	var mp map[string]int64
+	err := StreamOf([]string{"1", "2"}).ToSetBy(func(s string) (string, int64) {
+		i, _ := strconv.ParseInt(s, 10, 64)
+		return s, i
+	}).Map(func(k string, v int64) (string, int64, error) {
+		if v == 2 {
+			return k, v, errors.New("error")
+		}
+		return k, v, nil
+	}).To(&mp)
+	suite.Error(err)
+}
+
+func (suite *KVStreamTestSuite) TestWithFlatMapError() {
+	var list []int64
+	err := StreamOf([]string{"1", "2"}).ToSetBy(func(s string) (string, int64) {
+		i, _ := strconv.ParseInt(s, 10, 64)
+		return s, i
+	}).FlatMap(func(k string, v int64) (int64, error) {
+		if v == 2 {
+			return v, errors.New("error")
+		}
+		return v, nil
+	}).ToSlice(&list)
 	suite.Error(err)
 }

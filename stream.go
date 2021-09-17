@@ -8,7 +8,7 @@ import (
 type Stream interface {
 	// Map stream to another, fn should be func(element_type) (another_type,&optional error/bool)
 	Map(fn interface{}) Stream
-	// FlatMap stream to another, fn should be func(element_type) slice_type
+	// FlatMap stream to another, fn should be func(element_type) (slice_type,&optional error)
 	FlatMap(fn interface{}) Stream
 	// Filter stream, fn should be func(element_type) bool
 	Filter(fn interface{}) Stream
