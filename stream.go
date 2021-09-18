@@ -116,6 +116,14 @@ func StreamOf(arr interface{}) Stream {
 }
 
 func Stream0Of(arr ...interface{}) Stream {
+	length := len(arr)
+	if length > 1 && arr[length-1] != nil && reflect.TypeOf(arr[length-1]).AssignableTo(errType) && arr[length-1].(error) != nil {
+		ctx := newCtx(nil)
+		/* arr[length-1] is error */
+		ctx.SetErr(arr[length-1].(error))
+		elemTyp, it := makeIter(reflect.ValueOf(arr[0]))
+		return newStream(ctx, elemTyp, it)
+	}
 	return StreamOf(arr[0])
 }
 

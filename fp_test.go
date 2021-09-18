@@ -1637,6 +1637,14 @@ func (suite *TestFPTestSuite) TestStream0() {
 	fn := func() ([]string, error) { return []string{"a"}, nil }
 	suite.Equal([]string{"a"}, Stream0Of(fn()).Strings())
 }
+
+func (suite *TestFPTestSuite) TestStream0WithError() {
+	fn := func() ([]string, error) { return []string{"a"}, errors.New("err") }
+	var list []string
+	err := Stream0Of(fn()).ToSlice(&list)
+	suite.Len(list, 0)
+	suite.Error(err)
+}
 func (suite *TestFPTestSuite) TestKVNilStreamXXX() {
 	suite.Zero(newNilKVStream().Foreach(func(string, string) {}).Size())
 	suite.Zero(newNilKVStream().Map(func(string, string) (string, string) { return "", "" }).Size())
