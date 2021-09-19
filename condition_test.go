@@ -210,3 +210,31 @@ func (suite *FPIfTestSuite) TestComplex() {
 	suite.Equal("other", conditionMap(15))
 	suite.Equal("other", conditionMap(100))
 }
+
+func (suite *FPIfTestSuite) TestConditionWithDefault() {
+	between1And10 := And(func(i int) bool {
+		return 1 <= i
+	}, func(i int) bool {
+		return i <= 10
+	})
+	conditionMap := When(between1And10).Then(func(i int) int { return i * 2 }).Else(nil).(func(int) int)
+
+	suite.Equal(10, conditionMap(5))
+	suite.Equal(11, conditionMap(11))
+}
+
+func (suite *FPIfTestSuite) TestDefaultCondition() {
+	between1And10 := And(func(i int) bool {
+		return 1 <= i
+	}, func(i int) bool {
+		return i <= 10
+	})
+
+	suite.Panics(func() {
+		When(between1And10).Then(func(i int) string { return "between 1 and 10" }).Else(nil)
+	})
+
+	suite.Panics(func() {
+		When(between1And10).Then(func(i int) (int, string) { return i, "between 1 and 10" }).Else(nil)
+	})
+}
