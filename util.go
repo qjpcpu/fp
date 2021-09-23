@@ -171,3 +171,17 @@ func MinInt16(a, b int16) int16 {
 	}
 	return b
 }
+
+func outTypes(typ reflect.Type) (out []reflect.Type) {
+	StreamOf(NewCounter(typ.NumOut())).Map(func(i int) reflect.Type {
+		return typ.Out(i)
+	}).ToSlice(&out)
+	return
+}
+
+func inTypes(typ reflect.Type) (out []reflect.Type) {
+	StreamOf(NewCounter(typ.NumIn())).Map(func(i int) reflect.Type {
+		return typ.In(i)
+	}).ToSlice(&out)
+	return
+}
