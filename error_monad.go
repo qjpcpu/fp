@@ -13,6 +13,7 @@ type Monad interface {
 	FlatMap(fn interface{}) Stream
 	// To ptr
 	To(ptr interface{}) error
+	Error() error
 }
 
 func M(v ...interface{}) Monad {
@@ -125,6 +126,20 @@ func (em errorMonad) To(ptr interface{}) error {
 	}
 	if out[1].Bool() {
 		reflect.ValueOf(ptr).Elem().Set(out[0])
+	}
+	return nil
+}
+
+func (em errorMonad) Error() error {
+	out := em.fn.Call(nil)
+	if e := out[2].Interface(); e != nil && e.(error) != nil {
+		return e.(error)
+	}
+	v := out[0].Interface()
+	if v != nil {
+		if e, ok := v.(error); ok {
+			return e
+		}
 	}
 	return nil
 }

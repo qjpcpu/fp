@@ -218,3 +218,24 @@ func (suite *MonadTestSuite) TestMonadExpect32() {
 	suite.Equal(int64(0), v)
 	suite.NoError(err)
 }
+
+func (suite *MonadTestSuite) TestMonadReturnError() {
+	err := M("21a").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Error()
+	suite.Error(err)
+}
+
+func (suite *MonadTestSuite) TestMonadReturnError1() {
+	err := M("21a").Map(func(s string) error {
+		_, err := strconv.ParseInt(s, 10, 64)
+		return err
+	}).Error()
+	suite.Error(err)
+
+	err = M("21a").Map(func(s string) error {
+		_, _ = strconv.ParseInt(s, 10, 64)
+		return nil
+	}).Error()
+	suite.NoError(err)
+}
