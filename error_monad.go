@@ -5,8 +5,13 @@ import (
 )
 
 type Monad interface {
+	// Map func(type1) (type2,&optional error/bool)
 	Map(fn interface{}) Monad
+	// Expect func(type1) (error/bool)
+	Expect(fn interface{}) Monad
+	// FlatMap func(type1) (type2,&optional error/bool)
 	FlatMap(fn interface{}) Stream
+	// To ptr
 	To(ptr interface{}) error
 }
 
@@ -50,6 +55,38 @@ func (em errorMonad) Map(fn interface{}) Monad {
 		}
 		return fnVal.Call(out[:1])
 	}))
+}
+
+func (em errorMonad) Expect(fn interface{}) Monad {
+	typ := reflect.TypeOf(fn)
+	wrapTyp := reflect.FuncOf(nil, outTypes(em.fn.Type()), false)
+	if typ.NumOut() == 1 && typ.Out(0).AssignableTo(errType) {
+		return newErrorMonad(reflect.MakeFunc(wrapTyp, func(in []reflect.Value) []reflect.Value {
+			out := em.fn.Call(in)
+			if e := out[2].Interface(); e != nil && e.(error) != nil {
+				return []reflect.Value{reflect.Zero(em.fn.Type().Out(0)), reflect.ValueOf(false), out[2]}
+			}
+			if !out[1].Bool() {
+				return []reflect.Value{reflect.Zero(em.fn.Type().Out(0)), reflect.ValueOf(false), reflect.Zero(errType)}
+			}
+			out1 := reflect.ValueOf(fn).Call(out[:1])
+			return []reflect.Value{out[0], reflect.ValueOf(true), out1[0]}
+		}))
+	} else if typ.NumOut() == 1 && typ.Out(0).AssignableTo(boolType) {
+		return newErrorMonad(reflect.MakeFunc(wrapTyp, func(in []reflect.Value) []reflect.Value {
+			out := em.fn.Call(in)
+			if e := out[2].Interface(); e != nil && e.(error) != nil {
+				return []reflect.Value{reflect.Zero(em.fn.Type().Out(0)), reflect.ValueOf(false), out[2]}
+			}
+			if !out[1].Bool() {
+				return []reflect.Value{reflect.Zero(em.fn.Type().Out(0)), reflect.ValueOf(false), reflect.Zero(errType)}
+			}
+			out1 := reflect.ValueOf(fn).Call(out[:1])
+			return []reflect.Value{out[0], out1[0], reflect.Zero(errType)}
+		}))
+	} else {
+		panic("bad expect function " + typ.String())
+	}
 }
 
 func (em errorMonad) FlatMap(fn interface{}) Stream {

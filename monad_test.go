@@ -140,3 +140,81 @@ func (suite *MonadTestSuite) TestMayBeMonadFlatMap3() {
 	suite.Len(v, 0)
 	suite.NoError(err)
 }
+
+func (suite *MonadTestSuite) TestMonadExpect() {
+	var v int64
+	err := M("2").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Expect(func(i int64) bool {
+		return i > 0
+	}).To(&v)
+	suite.Equal(int64(2), v)
+	suite.NoError(err)
+}
+
+func (suite *MonadTestSuite) TestMonadExpect2() {
+	var v int64
+	err := M("2").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Expect(func(i int64) error {
+		return errors.New("xerr")
+	}).To(&v)
+	suite.Equal(int64(0), v)
+	suite.Error(err)
+}
+
+func (suite *MonadTestSuite) TestMonadExpect21() {
+	var v int64
+	err := M("21a").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Expect(func(i int64) error {
+		return nil
+	}).To(&v)
+	suite.Equal(int64(0), v)
+	suite.Error(err)
+}
+func (suite *MonadTestSuite) TestMonadExpect22() {
+	var v int64
+	err := M("21a").Map(func(s string) (int64, bool) {
+		i, err := strconv.ParseInt(s, 10, 64)
+		return i, err == nil
+	}).Expect(func(i int64) error {
+		return nil
+	}).To(&v)
+	suite.Equal(int64(0), v)
+	suite.NoError(err)
+}
+
+func (suite *MonadTestSuite) TestMonadExpect3() {
+	suite.Panics(func() {
+		var v int
+		M("2").Map(func(s string) (int64, error) {
+			return strconv.ParseInt(s, 10, 64)
+		}).Expect(func(i int64) int {
+			return 0
+		}).To(&v)
+
+	})
+}
+
+func (suite *MonadTestSuite) TestMonadExpect31() {
+	var v int64
+	err := M("21a").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Expect(func(i int64) bool {
+		return true
+	}).To(&v)
+	suite.Equal(int64(0), v)
+	suite.Error(err)
+}
+func (suite *MonadTestSuite) TestMonadExpect32() {
+	var v int64
+	err := M("21a").Map(func(s string) (int64, bool) {
+		i, err := strconv.ParseInt(s, 10, 64)
+		return i, err == nil
+	}).Expect(func(i int64) bool {
+		return true
+	}).To(&v)
+	suite.Equal(int64(0), v)
+	suite.NoError(err)
+}
