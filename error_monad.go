@@ -95,27 +95,46 @@ func (em errorMonad) Expect(fn interface{}) Monad {
 func (em errorMonad) FlatMap(fn interface{}) Stream {
 	fnVal := toErrMonadFunc(fn)
 	ctx := newCtx(nil)
+	evalM := func() (reflect.Value, bool, error) {
+		out := em.fn.Call(nil)
+		if e := out[2].Interface(); e != nil && e.(error) != nil {
+			return reflect.Value{}, false, e.(error)
+		}
+		if !out[1].Bool() {
+			return reflect.Value{}, false, nil
+		}
+		out = fnVal.Call(out[:1])
+		if e := out[2].Interface(); e != nil && e.(error) != nil {
+			return reflect.Value{}, false, e.(error)
+		}
+		if !out[1].Bool() {
+			return reflect.Value{}, false, nil
+		}
+		return out[0], true, nil
+	}
+
+	if typ := fnVal.Type().Out(0); typ != streamType {
+	} else if out, ok, err := evalM(); err != nil {
+		sc := newNilSource()
+		ctx.SetErr(err)
+		return newStream(ctx, sc.ElemType(), sc.Next)
+	} else if !ok {
+		return newNilStream()
+	} else {
+		return out.Interface().(Stream)
+	}
 	elemTyp := fnVal.Type().Out(0).Elem()
 	var iter iterator
 	return newStream(ctx, elemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
-			out := em.fn.Call(nil)
-			if e := out[2].Interface(); e != nil && e.(error) != nil {
-				ctx.SetErr(e.(error))
+			out, ok, err := evalM()
+			if err != nil {
+				ctx.SetErr(err)
+				return reflect.Value{}, false
+			} else if !ok {
 				return reflect.Value{}, false
 			}
-			if !out[1].Bool() {
-				return reflect.Value{}, false
-			}
-			out = fnVal.Call(out[:1])
-			if e := out[2].Interface(); e != nil && e.(error) != nil {
-				ctx.SetErr(e.(error))
-				return reflect.Value{}, false
-			}
-			if !out[1].Bool() {
-				return reflect.Value{}, false
-			}
-			_, iter = makeIter(out[0])
+			_, iter = makeIter(out)
 		}
 		return iter()
 	})

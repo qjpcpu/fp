@@ -63,6 +63,39 @@ func (suite *MonadTestSuite) TestErrorMonadFlatMap() {
 	suite.Equal([]int{0, 1}, out)
 }
 
+func (suite *MonadTestSuite) TestErrorMonadFlatMapStream() {
+	var out []int
+	err := M("2").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).FlatMap(func(i int64) Stream {
+		return StreamOf(NewCounter(int(i)))
+	}).ToSlice(&out)
+	suite.NoError(err)
+	suite.Equal([]int{0, 1}, out)
+}
+
+func (suite *MonadTestSuite) TestErrorMonadFlatMapStreamWithError() {
+	var out []int
+	err := M("2").Map(func(s string) (int64, error) {
+		return 0, errors.New("err")
+	}).FlatMap(func(i int64) Stream {
+		return StreamOf(NewCounter(int(i)))
+	}).ToSlice(&out)
+	suite.Error(err)
+	suite.Zero(out)
+}
+
+func (suite *MonadTestSuite) TestErrorMonadFlatMapStreamWithOptional() {
+	var out []int
+	err := M("2").Map(func(s string) (int64, bool) {
+		return 0, false
+	}).FlatMap(func(i int64) Stream {
+		return StreamOf(NewCounter(int(i)))
+	}).ToSlice(&out)
+	suite.NoError(err)
+	suite.Zero(out)
+}
+
 func (suite *MonadTestSuite) TestErrorMonadFMWithConstructError() {
 	cons := func() (string, error) {
 		return "11", errors.New("err")
