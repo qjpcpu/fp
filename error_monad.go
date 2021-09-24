@@ -13,6 +13,7 @@ type Monad interface {
 	FlatMap(fn interface{}) Stream
 	// To ptr
 	To(ptr interface{}) error
+	// Error gives error
 	Error() error
 }
 
@@ -36,6 +37,7 @@ func M(v ...interface{}) Monad {
 }
 
 type errorMonad struct {
+	/* fn is kind of func() (any,bool,error) */
 	fn reflect.Value
 }
 
