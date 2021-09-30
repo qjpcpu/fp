@@ -2,6 +2,7 @@ package fp
 
 import (
 	"reflect"
+	"sync"
 )
 
 type Monad interface {
@@ -13,6 +14,8 @@ type Monad interface {
 	FlatMap(fn interface{}) Stream
 	// Zip monads
 	Zip(interface{}, ...Monad) Monad
+	// Once monad
+	Once() Monad
 	// To ptr
 	To(ptr interface{}) error
 	// Error gives error
@@ -94,6 +97,17 @@ func (em errorMonad) Zip(fn interface{}, others ...Monad) Monad {
 			input = append(input, reflect.ValueOf(out))
 		}
 		return fnVal.Call(input)
+	}))
+}
+
+func (em errorMonad) Once() Monad {
+	var out []reflect.Value
+	var once sync.Once
+	return newErrorMonad(reflect.MakeFunc(em.fn.Type(), func(in []reflect.Value) []reflect.Value {
+		once.Do(func() {
+			out = em.fn.Call(nil)
+		})
+		return out
 	}))
 }
 

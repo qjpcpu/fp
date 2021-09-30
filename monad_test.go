@@ -318,3 +318,35 @@ func (suite *MonadTestSuite) TestMonadCombineFailedByAnyFalse() {
 	suite.NoError(err)
 	suite.Equal(int64(0), score)
 }
+
+func (suite *MonadTestSuite) TestMonadInvokeOnce() {
+	var cnt int
+	var score int64
+	m := M("10").Map(func(s string) (int64, error) {
+		cnt++
+		return strconv.ParseInt(s, 10, 64)
+	})
+	err := m.To(&score)
+	suite.NoError(err)
+	suite.Equal(int64(10), score)
+	suite.Equal(1, cnt)
+	err = m.To(&score)
+	suite.NoError(err)
+	suite.Equal(int64(10), score)
+	suite.Equal(2, cnt)
+
+	cnt = 0
+	score = 0
+	m = M("10").Map(func(s string) (int64, error) {
+		cnt++
+		return strconv.ParseInt(s, 10, 64)
+	}).Once()
+	err = m.To(&score)
+	suite.NoError(err)
+	suite.Equal(int64(10), score)
+	suite.Equal(1, cnt)
+	err = m.To(&score)
+	suite.NoError(err)
+	suite.Equal(int64(10), score)
+	suite.Equal(1, cnt)
+}
