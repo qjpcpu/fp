@@ -272,3 +272,49 @@ func (suite *MonadTestSuite) TestMonadReturnError1() {
 	}).Error()
 	suite.NoError(err)
 }
+
+func (suite *MonadTestSuite) TestMonadCombine() {
+	m1 := M("20").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	})
+
+	var score int64
+	err := M("10").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Zip(func(a, b int64) int64 {
+		return a + b
+	}, m1).To(&score)
+	suite.NoError(err)
+	suite.Equal(int64(30), score)
+}
+
+func (suite *MonadTestSuite) TestMonadCombineFailedByAnyFailed() {
+	m1 := M("20a").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	})
+
+	var score int64
+	err := M("10").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Zip(func(a, b int64) int64 {
+		return a + b
+	}, m1).To(&score)
+	suite.Error(err)
+	suite.Equal(int64(0), score)
+}
+
+func (suite *MonadTestSuite) TestMonadCombineFailedByAnyFalse() {
+	m1 := M("20a").Map(func(s string) (int64, bool) {
+		i, err := strconv.ParseInt(s, 10, 64)
+		return i, err == nil
+	})
+
+	var score int64
+	err := M("10").Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Zip(func(a, b int64) int64 {
+		return a + b
+	}, m1).To(&score)
+	suite.NoError(err)
+	suite.Equal(int64(0), score)
+}

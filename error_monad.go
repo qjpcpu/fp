@@ -11,10 +11,14 @@ type Monad interface {
 	Expect(fn interface{}) Monad
 	// FlatMap func(type1) (type2,&optional error/bool)
 	FlatMap(fn interface{}) Stream
+	// Zip monads
+	Zip(interface{}, ...Monad) Monad
 	// To ptr
 	To(ptr interface{}) error
 	// Error gives error
 	Error() error
+	// fnContainer return error_boolean_monad real container
+	fnContainer() func() (interface{}, bool, error)
 }
 
 func M(v ...interface{}) Monad {
@@ -57,6 +61,39 @@ func (em errorMonad) Map(fn interface{}) Monad {
 			return []reflect.Value{reflect.Zero(fnVal.Type().Out(0)), reflect.ValueOf(false), reflect.Zero(errType)}
 		}
 		return fnVal.Call(out[:1])
+	}))
+}
+
+func (em errorMonad) fnContainer() func() (interface{}, bool, error) {
+	return func() (interface{}, bool, error) {
+		out := em.fn.Call(nil)
+		if e := out[2].Interface(); e != nil && e.(error) != nil {
+			return nil, false, e.(error)
+		}
+		if !out[1].Bool() {
+			return nil, false, nil
+		}
+		return out[0].Interface(), true, nil
+	}
+}
+
+func (em errorMonad) Zip(fn interface{}, others ...Monad) Monad {
+	fnVal := toErrMonadFunc(fn)
+	outTyp := reflect.FuncOf(nil, outTypes(fnVal.Type()), false)
+	return newErrorMonad(reflect.MakeFunc(outTyp, func(in []reflect.Value) []reflect.Value {
+		monads := append([]Monad{em}, others...)
+		var input []reflect.Value
+		for _, m := range monads {
+			out, ok, err := m.fnContainer()()
+			if err != nil {
+				return []reflect.Value{reflect.Zero(fnVal.Type().Out(0)), reflect.ValueOf(false), reflect.ValueOf(err)}
+			}
+			if !ok {
+				return []reflect.Value{reflect.Zero(fnVal.Type().Out(0)), reflect.ValueOf(false), reflect.Zero(errType)}
+			}
+			input = append(input, reflect.ValueOf(out))
+		}
+		return fnVal.Call(input)
 	}))
 }
 
