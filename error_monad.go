@@ -8,8 +8,10 @@ import (
 type Monad interface {
 	// Map func(type1) (type2,&optional error/bool)
 	Map(fn interface{}) Monad
-	// Expect func(type1) (error/bool)
-	Expect(fn interface{}) Monad
+	// ExpectPass func(type1) (bool)
+	ExpectPass(fn interface{}) Monad
+	// ExpectNoError func(type1) (error)
+	ExpectNoError(fn interface{}) Monad
 	// FlatMap func(type1) (type2,&optional error/bool)
 	FlatMap(fn interface{}) Stream
 	// Zip monads
@@ -109,6 +111,14 @@ func (em errorMonad) Once() Monad {
 		})
 		return out
 	}))
+}
+
+func (em errorMonad) ExpectPass(fn interface{}) Monad {
+	return em.Expect(fn)
+}
+
+func (em errorMonad) ExpectNoError(fn interface{}) Monad {
+	return em.Expect(fn)
 }
 
 func (em errorMonad) Expect(fn interface{}) Monad {

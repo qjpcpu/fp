@@ -178,7 +178,7 @@ func (suite *MonadTestSuite) TestMonadExpect() {
 	var v int64
 	err := M("2").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
-	}).Expect(func(i int64) bool {
+	}).ExpectPass(func(i int64) bool {
 		return i > 0
 	}).To(&v)
 	suite.Equal(int64(2), v)
@@ -189,7 +189,7 @@ func (suite *MonadTestSuite) TestMonadExpect2() {
 	var v int64
 	err := M("2").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
-	}).Expect(func(i int64) error {
+	}).ExpectNoError(func(i int64) error {
 		return errors.New("xerr")
 	}).To(&v)
 	suite.Equal(int64(0), v)
@@ -200,7 +200,7 @@ func (suite *MonadTestSuite) TestMonadExpect21() {
 	var v int64
 	err := M("21a").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
-	}).Expect(func(i int64) error {
+	}).ExpectNoError(func(i int64) error {
 		return nil
 	}).To(&v)
 	suite.Equal(int64(0), v)
@@ -211,7 +211,7 @@ func (suite *MonadTestSuite) TestMonadExpect22() {
 	err := M("21a").Map(func(s string) (int64, bool) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return i, err == nil
-	}).Expect(func(i int64) error {
+	}).ExpectNoError(func(i int64) error {
 		return nil
 	}).To(&v)
 	suite.Equal(int64(0), v)
@@ -223,7 +223,7 @@ func (suite *MonadTestSuite) TestMonadExpect3() {
 		var v int
 		M("2").Map(func(s string) (int64, error) {
 			return strconv.ParseInt(s, 10, 64)
-		}).Expect(func(i int64) int {
+		}).ExpectPass(func(i int64) int {
 			return 0
 		}).To(&v)
 
@@ -234,7 +234,7 @@ func (suite *MonadTestSuite) TestMonadExpect31() {
 	var v int64
 	err := M("21a").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
-	}).Expect(func(i int64) bool {
+	}).ExpectPass(func(i int64) bool {
 		return true
 	}).To(&v)
 	suite.Equal(int64(0), v)
@@ -245,7 +245,7 @@ func (suite *MonadTestSuite) TestMonadExpect32() {
 	err := M("21a").Map(func(s string) (int64, bool) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return i, err == nil
-	}).Expect(func(i int64) bool {
+	}).ExpectPass(func(i int64) bool {
 		return true
 	}).To(&v)
 	suite.Equal(int64(0), v)
