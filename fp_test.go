@@ -1893,3 +1893,107 @@ func (suite *TestFPTestSuite) TestError6() {
 	suite.NoError(err)
 	newNilStream().Run()
 }
+
+type _testCursor struct {
+	i      int
+	max    int
+	errfun func(int) error
+}
+
+func (c *_testCursor) Next() bool {
+	return c.i < c.max
+}
+
+func (c *_testCursor) Scan(dest ...interface{}) error {
+	if err := c.errfun(c.i); err != nil {
+		return err
+	}
+	v0 := dest[0].(*int)
+	*v0 = c.i
+	v1 := dest[1].(*string)
+	*v1 = fmt.Sprint(c.i)
+	c.i++
+	return nil
+}
+
+func (suite *TestFPTestSuite) TestCursor() {
+	c := &_testCursor{
+		i:      1,
+		max:    3,
+		errfun: func(int) error { return nil },
+	}
+	var out []string
+	err := StreamByCursor(c, func(i int, s string) string {
+		return fmt.Sprintf("%v-%v", i, s)
+	}).ToSlice(&out)
+	suite.NoError(err)
+	suite.Equal([]string{"1-1", "2-2"}, out)
+
+	c = &_testCursor{
+		i:      1,
+		max:    3,
+		errfun: func(int) error { return nil },
+	}
+	err = StreamByCursor(c, func(i int, s *string) (string, error) {
+		return fmt.Sprintf("%v-%v", i, *s), nil
+	}).ToSlice(&out)
+	suite.NoError(err)
+	suite.Equal([]string{"1-1", "2-2"}, out)
+}
+
+func (suite *TestFPTestSuite) TestCursorError() {
+	c := &_testCursor{
+		i:   1,
+		max: 3,
+		errfun: func(x int) error {
+			if x == 2 {
+				return errors.New("err")
+			}
+			return nil
+		},
+	}
+	var out []string
+	err := StreamByCursor(c, func(i int, s string) string {
+		return fmt.Sprintf("%v-%v", i, s)
+	}).ToSlice(&out)
+	suite.Error(err)
+	suite.Equal([]string{"1-1"}, out)
+}
+
+func (suite *TestFPTestSuite) TestCursorError1() {
+	c := &_testCursor{
+		i:   1,
+		max: 3,
+		errfun: func(x int) error {
+			if x == 2 {
+				return errors.New("err")
+			}
+			return nil
+		},
+	}
+	var out []string
+	err := StreamByCursor(c, func(i int, s string) (string, error) {
+		return fmt.Sprintf("%v-%v", i, s), nil
+	}).ToSlice(&out)
+	suite.Error(err)
+	suite.Equal([]string{"1-1"}, out)
+}
+
+func (suite *TestFPTestSuite) TestCursorError2() {
+	c := &_testCursor{
+		i:   1,
+		max: 3,
+		errfun: func(x int) error {
+			return nil
+		},
+	}
+	var out []string
+	err := StreamByCursor(c, func(i int, s string) (string, error) {
+		if i == 2 {
+			return "", errors.New("test err")
+		}
+		return fmt.Sprintf("%v-%v", i, s), nil
+	}).ToSlice(&out)
+	suite.Error(err)
+	suite.Equal([]string{"1-1"}, out)
+}
