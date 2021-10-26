@@ -93,8 +93,8 @@ type Stream interface {
 	Run()
 	// ToSlice ptr
 	ToSlice(ptr interface{}) error
-	// Deprecated, Result of stream
-	Result() interface{}
+	// Error first error
+	Error() error
 	// shortcuts
 	Strings() []string
 	StringsList() [][]string

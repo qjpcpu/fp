@@ -76,7 +76,7 @@ func (ns *nilStream) ToSlice(ptr interface{}) error {
 	}
 	return nil
 }
-func (ns *nilStream) Result() interface{}           { return nil }
+
 func (ns *nilStream) Strings() []string             { return nil }
 func (ns *nilStream) StringsList() [][]string       { return nil }
 func (ns *nilStream) Ints() []int                   { return nil }
@@ -88,6 +88,7 @@ func (ns *nilStream) Uints() []uint                 { return nil }
 func (ns *nilStream) Uint32s() []uint32             { return nil }
 func (ns *nilStream) Uint64s() []uint64             { return nil }
 func (ns *nilStream) JoinStrings(seq string) string { return "" }
+func (ks *nilStream) Error() error                  { return nil }
 
 type nilkvStream struct{}
 
@@ -101,7 +102,6 @@ func (ks *nilkvStream) Contains(key interface{}) bool   { return false }
 func (ks *nilkvStream) Keys() Stream                    { return newNilStream() }
 func (ks *nilkvStream) Values() Stream                  { return newNilStream() }
 func (ks *nilkvStream) Size() int                       { return 0 }
-func (ks *nilkvStream) Result() interface{}             { return nil }
 func (ks *nilkvStream) Run()                            {}
 func (ks *nilkvStream) To(dstPtr interface{}) error {
 	val := reflect.ValueOf(dstPtr)

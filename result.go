@@ -35,6 +35,17 @@ func (q *stream) Run() {
 	})
 }
 
+func (q *stream) Error() error {
+	if q.expectElemTyp.AssignableTo(errType) {
+		if err := q.SkipWhile(NoError()).First().Err(); err != nil {
+			return err
+		}
+		return q.ctx.Err()
+	}
+	q.Run()
+	return q.ctx.Err()
+}
+
 func (q *stream) getValue(slice reflect.Value) reflect.Value {
 	q.getValOnce.Do(func() {
 		if !slice.IsValid() {
@@ -54,7 +65,6 @@ func (q *stream) getValue(slice reflect.Value) reflect.Value {
 	return q.val
 }
 
-func (q *stream) Result() interface{}         { return q.getResult().Result() }
 func (q *stream) Strings() (s []string)       { return q.getResult().Strings() }
 func (q *stream) Ints() (s []int)             { return q.getResult().Ints() }
 func (q *stream) Int64s() (s []int64)         { return q.getResult().Int64s() }

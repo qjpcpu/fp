@@ -32,7 +32,7 @@ func (suite *KVStreamTestSuite) TestForeach() {
 	KVStreamOf(m).Foreach(func(key string, val int) {
 		keys = append(keys, key)
 		vals = append(vals, val)
-	}).Result()
+	}).Run()
 	suite.ElementsMatch([]string{"a", "b"}, keys)
 	suite.ElementsMatch([]int{1, 2}, vals)
 }
@@ -55,9 +55,10 @@ func (suite *KVStreamTestSuite) TestMap() {
 		"a": 1,
 		"b": 2,
 	}
-	vk := KVStreamOf(m).Map(func(k string, v int) (int, string) {
+	var vk map[int]string
+	KVStreamOf(m).Map(func(k string, v int) (int, string) {
 		return v, k
-	}).Result().(map[int]string)
+	}).To(&vk)
 	suite.Equal("a", vk[1])
 	suite.Equal("b", vk[2])
 }
@@ -78,17 +79,20 @@ func (suite *KVStreamTestSuite) TestFilter() {
 		"a": 1,
 		"b": 2,
 	}
+	var b []int
+	KVStreamOf(m).Filter(func(k string, v int) bool {
+		return v == 1
+	}).Values().ToSlice(&b)
 	suite.ElementsMatch(
 		[]int{1},
-		KVStreamOf(m).Filter(func(k string, v int) bool {
-			return v == 1
-		}).Values().Result().([]int),
+		b,
 	)
+	KVStreamOf(m).Reject(func(k string, v int) bool {
+		return v == 2
+	}).Values().ToSlice(&b)
 	suite.ElementsMatch(
 		[]int{1},
-		KVStreamOf(m).Reject(func(k string, v int) bool {
-			return v == 2
-		}).Values().Result().([]int),
+		b,
 	)
 }
 

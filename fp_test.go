@@ -179,12 +179,9 @@ func (suite *TestFPTestSuite) TestMapEmptySlice() {
 
 func (suite *TestFPTestSuite) TestMapEmptySliceResultType() {
 	var slice []string
-	out := StreamOf(slice).Map(strings.ToUpper).Result()
+	var out []string
+	StreamOf(slice).Map(strings.ToUpper).ToSlice(&out)
 	suite.Nil(out)
-
-	ret, ok := out.([]string)
-	suite.True(ok)
-	suite.Nil(ret)
 }
 
 func (suite *TestFPTestSuite) TestLazyMap() {
@@ -196,7 +193,7 @@ func (suite *TestFPTestSuite) TestLazyMap() {
 	})
 	suite.Equal(0, cnt)
 
-	q.Result()
+	q.Run()
 	suite.Equal(3, cnt)
 }
 
@@ -550,10 +547,13 @@ func (suite *TestFPTestSuite) TestDeepFlatten() {
 		{"abc", "de", "f"},
 		{"g", "hi"},
 	}
+
 	out := StreamOf(slice).Map(func(s []string) [][]byte {
-		return StreamOf(s).Map(func(st string) []byte {
+		var b [][]byte
+		StreamOf(s).Map(func(st string) []byte {
 			return []byte(st)
-		}).Result().([][]byte)
+		}).ToSlice(&b)
+		return b
 	}).Flatten().Flatten().Bytes()
 	suite.Equal("abcdefghi", string(out))
 
@@ -838,14 +838,15 @@ func (suite *TestFPTestSuite) TestJoinAfterNilStream() {
 
 func (suite *TestFPTestSuite) TestGroupBy() {
 	slice1 := []string{"abc", "de", "f", "gh"}
-	q := StreamOf(slice1).Map(strings.ToUpper).GroupBy(func(s string) int {
+	var m map[int][]string
+	StreamOf(slice1).Map(strings.ToUpper).GroupBy(func(s string) int {
 		return len(s)
-	}).Result().(map[int][]string)
+	}).To(&m)
 	suite.Equal(map[int][]string{
 		1: {"F"},
 		2: {"DE", "GH"},
 		3: {"ABC"},
-	}, q)
+	}, m)
 }
 
 func (suite *TestFPTestSuite) TestPrepend() {
@@ -1188,7 +1189,7 @@ func (suite *TestFPTestSuite) TestFullLazy() {
 		return i
 	}).Values().Flatten()
 	suite.Zero(count)
-	q.Result()
+	q.Run()
 	suite.NotZero(count)
 }
 
@@ -1206,7 +1207,8 @@ func (suite *TestFPTestSuite) TestStreamOfFunction() {
 		i++
 		return i, i < 5
 	}
-	out1 := StreamOf(fn1).Result().([]interface{})
+	var out1 []interface{}
+	StreamOf(fn1).ToSlice(&out1)
 	suite.Equal([]interface{}{1, 2, 3, 4}, out1)
 }
 
@@ -1614,7 +1616,7 @@ func (suite *TestFPTestSuite) TestNilStreamXXX() {
 	suite.Len(newNilStream().Append().Ints(), 0)
 	suite.False(newNilStream().Zip(StreamOf([]int{1}), func(int, int) int { return 1 }).Exists())
 	suite.False(newNilStream().ZipN(func(int, int) int { return 1 }, StreamOf([]int{1})).Exists())
-	suite.Nil(newNilStream().Result())
+
 	suite.Nil(newNilStream().Strings())
 	suite.Nil(newNilStream().StringsList())
 	suite.Nil(newNilStream().Ints())
@@ -1654,7 +1656,6 @@ func (suite *TestFPTestSuite) TestKVNilStreamXXX() {
 	suite.False(newNilKVStream().Contains(1))
 	suite.False(newNilKVStream().Keys().Exists())
 	suite.False(newNilKVStream().Values().Exists())
-	suite.Nil(newNilKVStream().Result())
 }
 
 func (suite *TestFPTestSuite) TestNilSourceXXX() {
@@ -1847,4 +1848,48 @@ func (suite *TestFPTestSuite) TestMapMapFilterToSetByTo() {
 
 	suite.Equal(mp, map[string]string{"B_1": "B_1"})
 	suite.NoError(err0)
+}
+
+func (suite *TestFPTestSuite) TestError1() {
+	err := StreamOf([]string{"1", "a"}).Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Error()
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestError2() {
+	err := Stream0Of([]string{"1", "2"}, errors.New("error")).Map(func(s string) (int64, error) {
+		return strconv.ParseInt(s, 10, 64)
+	}).Error()
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestError3() {
+	err := Stream0Of([]string{"1", "2"}, errors.New("error")).Map(func(s string) int64 {
+		i, _ := strconv.ParseInt(s, 10, 64)
+		return i
+	}).Error()
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestError4() {
+	err := Stream0Of([]string{"1", "2"}, errors.New("error")).Map(func(s string) error {
+		_, err0 := strconv.ParseInt(s, 10, 64)
+		return err0
+	}).Error()
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestError5() {
+	err := StreamOf([]string{"1", "a"}).Map(func(s string) error {
+		_, err0 := strconv.ParseInt(s, 10, 64)
+		return err0
+	}).Error()
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestError6() {
+	err := newNilStream().Error()
+	suite.NoError(err)
+	newNilStream().Run()
 }
