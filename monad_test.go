@@ -369,3 +369,22 @@ func (suite *MonadTestSuite) TestMonadNilType2() {
 	}).Error()
 	suite.Error(err)
 }
+
+func (suite *MonadTestSuite) TestMonadNilCover() {
+	f := func() net.Conn { return nil }
+	M(f()).Map(nil).ExpectPass(nil).ExpectNoError(nil).FlatMap(nil)
+	M(f()).Zip(nil).Once().fnContainer()()
+	M(f()).To(1)
+}
+
+func (suite *MonadTestSuite) CrossNil() {
+	f := func() (net.Conn, error) { return nil, errors.New("error") }
+	var num int
+	err := M(12).Zip(func(int, net.Conn) int { return 100 }, M(f())).To(&num)
+	suite.Error(err)
+	suite.Zero(num)
+
+	err = M(f()).Zip(func(net.Conn, int) int { return 100 }, M(12)).To(&num)
+	suite.Error(err)
+	suite.Zero(num)
+}
