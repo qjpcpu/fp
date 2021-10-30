@@ -1,0 +1,24 @@
+package fp
+
+type nilMonad struct{ err error }
+
+func newNilMonad(err error) nilMonad        { return nilMonad{err: err} }
+func (m nilMonad) Map(fn interface{}) Monad { return m }
+
+func (m nilMonad) ExpectPass(fn interface{}) Monad { return m }
+
+func (m nilMonad) ExpectNoError(fn interface{}) Monad { return m }
+
+func (m nilMonad) FlatMap(fn interface{}) Stream { return newNilStream() }
+
+func (m nilMonad) Zip(interface{}, ...Monad) Monad { return m }
+
+func (m nilMonad) Once() Monad { return m }
+
+func (m nilMonad) To(ptr interface{}) error { return m.err }
+
+func (m nilMonad) Error() error { return m.err }
+
+func (m nilMonad) fnContainer() func() (interface{}, bool, error) {
+	return func() (interface{}, bool, error) { return nil, false, m.err }
+}

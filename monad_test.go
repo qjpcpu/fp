@@ -2,6 +2,7 @@ package fp
 
 import (
 	"errors"
+	"net"
 	"strconv"
 	"testing"
 
@@ -349,4 +350,22 @@ func (suite *MonadTestSuite) TestMonadInvokeOnce() {
 	suite.NoError(err)
 	suite.Equal(int64(10), score)
 	suite.Equal(1, cnt)
+}
+
+func (suite *MonadTestSuite) TestMonadNilType() {
+	f := func() net.Conn { return nil }
+
+	err := M(f()).ExpectPass(func(c net.Conn) bool {
+		return c != nil
+	}).Error()
+	suite.NoError(err)
+}
+
+func (suite *MonadTestSuite) TestMonadNilType2() {
+	f := func() (net.Conn, error) { return nil, errors.New("error") }
+
+	err := M(f()).ExpectPass(func(c net.Conn) bool {
+		return c != nil
+	}).Error()
+	suite.Error(err)
 }

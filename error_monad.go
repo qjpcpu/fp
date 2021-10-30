@@ -27,6 +27,14 @@ type Monad interface {
 }
 
 func M(v ...interface{}) Monad {
+	if v[0] == nil {
+		if len(v) > 1 {
+			if _, ok := v[len(v)-1].(error); ok {
+				return newNilMonad(v[len(v)-1].(error))
+			}
+		}
+		return newNilMonad(nil)
+	}
 	typ := reflect.FuncOf(nil, []reflect.Type{reflect.TypeOf(v[0]), boolType, errType}, false)
 	if len(v) > 1 {
 		if _, ok := v[len(v)-1].(error); ok {
