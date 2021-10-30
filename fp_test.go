@@ -1997,3 +1997,17 @@ func (suite *TestFPTestSuite) TestCursorError2() {
 	suite.Error(err)
 	suite.Equal([]string{"1-1"}, out)
 }
+
+func (suite *TestFPTestSuite) TestStream0Nil() {
+	f := func() ([]string, error) { return nil, errors.New("x") }
+	var out []string
+	err := Stream0Of(f()).ToSlice(&out)
+	suite.Error(err)
+}
+
+func (suite *TestFPTestSuite) TestStream0Nil1() {
+	f := func() ([]string, error) { return nil, nil }
+	var out []string
+	err := Stream0Of(f()).ToSlice(&out)
+	suite.NoError(err)
+}
