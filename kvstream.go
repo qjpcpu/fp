@@ -12,8 +12,8 @@ type KVStream interface {
 	// Map k-v pair
 	// fn should be func(key_type,element_type) (any_type,any_type,&optional error)
 	Map(fn interface{}) KVStream
-	// FlatMap map to array, fn should be func(key_type,element_type) (any_type,&optional error)
-	FlatMap(fn interface{}) Stream
+	// MapToStream map to array, fn should be func(key_type,element_type) (any_type,&optional error)
+	MapToStream(fn interface{}) Stream
 	// Filter kv pair
 	Filter(fn interface{}) KVStream
 	// Reject kv pair
@@ -101,7 +101,7 @@ func (obj *kvStream) Map(fn interface{}) KVStream {
 	})
 }
 
-func (obj *kvStream) FlatMap(fn interface{}) Stream {
+func (obj *kvStream) MapToStream(fn interface{}) Stream {
 	fnVal := reflect.ValueOf(fn)
 	var iter *reflect.MapIter
 	var done bool

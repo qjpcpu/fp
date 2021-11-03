@@ -92,17 +92,17 @@ func (ks *nilStream) Error() error                  { return nil }
 
 type nilkvStream struct{}
 
-func newNilKVStream() KVStream                          { return &nilkvStream{} }
-func (ks *nilkvStream) Foreach(fn interface{}) KVStream { return ks }
-func (ks *nilkvStream) Map(fn interface{}) KVStream     { return ks }
-func (ks *nilkvStream) FlatMap(fn interface{}) Stream   { return newNilStream() }
-func (ks *nilkvStream) Filter(fn interface{}) KVStream  { return ks }
-func (ks *nilkvStream) Reject(fn interface{}) KVStream  { return ks }
-func (ks *nilkvStream) Contains(key interface{}) bool   { return false }
-func (ks *nilkvStream) Keys() Stream                    { return newNilStream() }
-func (ks *nilkvStream) Values() Stream                  { return newNilStream() }
-func (ks *nilkvStream) Size() int                       { return 0 }
-func (ks *nilkvStream) Run()                            {}
+func newNilKVStream() KVStream                            { return &nilkvStream{} }
+func (ks *nilkvStream) Foreach(fn interface{}) KVStream   { return ks }
+func (ks *nilkvStream) Map(fn interface{}) KVStream       { return ks }
+func (ks *nilkvStream) MapToStream(fn interface{}) Stream { return newNilStream() }
+func (ks *nilkvStream) Filter(fn interface{}) KVStream    { return ks }
+func (ks *nilkvStream) Reject(fn interface{}) KVStream    { return ks }
+func (ks *nilkvStream) Contains(key interface{}) bool     { return false }
+func (ks *nilkvStream) Keys() Stream                      { return newNilStream() }
+func (ks *nilkvStream) Values() Stream                    { return newNilStream() }
+func (ks *nilkvStream) Size() int                         { return 0 }
+func (ks *nilkvStream) Run()                              {}
 func (ks *nilkvStream) To(dstPtr interface{}) error {
 	val := reflect.ValueOf(dstPtr)
 	if !val.Elem().IsValid() || val.Elem().IsNil() {

@@ -1650,7 +1650,7 @@ func (suite *TestFPTestSuite) TestStream0WithError() {
 func (suite *TestFPTestSuite) TestKVNilStreamXXX() {
 	suite.Zero(newNilKVStream().Foreach(func(string, string) {}).Size())
 	suite.Zero(newNilKVStream().Map(func(string, string) (string, string) { return "", "" }).Size())
-	suite.Zero(newNilKVStream().FlatMap(func(string, string) string { return "" }).Size())
+	suite.Zero(newNilKVStream().MapToStream(func(string, string) string { return "" }).Size())
 	suite.Zero(newNilKVStream().Filter(func(string, string) bool { return true }).Size())
 	suite.Zero(newNilKVStream().Reject(func(string, string) bool { return true }).Size())
 	suite.False(newNilKVStream().Contains(1))
