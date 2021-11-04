@@ -95,7 +95,7 @@ type nilkvStream struct{}
 func newNilKVStream() KVStream                            { return &nilkvStream{} }
 func (ks *nilkvStream) Foreach(fn interface{}) KVStream   { return ks }
 func (ks *nilkvStream) Map(fn interface{}) KVStream       { return ks }
-func (ks *nilkvStream) MapToStream(fn interface{}) Stream { return newNilStream() }
+func (ks *nilkvStream) ZipMap(fn interface{}) Stream { return newNilStream() }
 func (ks *nilkvStream) Filter(fn interface{}) KVStream    { return ks }
 func (ks *nilkvStream) Reject(fn interface{}) KVStream    { return ks }
 func (ks *nilkvStream) Contains(key interface{}) bool     { return false }

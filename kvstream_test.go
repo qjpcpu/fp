@@ -68,7 +68,7 @@ func (suite *KVStreamTestSuite) TestFlatMap() {
 		"a": 1,
 		"b": 2,
 	}
-	vk := KVStreamOf(m).MapToStream(func(k string, v int) string {
+	vk := KVStreamOf(m).ZipMap(func(k string, v int) string {
 		return fmt.Sprintf("%v-%v", k, v)
 	}).Strings()
 	suite.ElementsMatch([]string{"a-1", "b-2"}, vk)
@@ -209,7 +209,7 @@ func (suite *KVStreamTestSuite) TestWithFlatMapError() {
 	err := StreamOf([]string{"1", "2"}).ToSetBy(func(s string) (string, int64) {
 		i, _ := strconv.ParseInt(s, 10, 64)
 		return s, i
-	}).MapToStream(func(k string, v int64) (int64, error) {
+	}).ZipMap(func(k string, v int64) (int64, error) {
 		if v == 2 {
 			return v, errors.New("error")
 		}
