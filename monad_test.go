@@ -377,7 +377,7 @@ func (suite *MonadTestSuite) TestMonadNilCover() {
 	M(f()).To(1)
 }
 
-func (suite *MonadTestSuite) CrossNil() {
+func (suite *MonadTestSuite) TestCrossNil() {
 	f := func() (net.Conn, error) { return nil, errors.New("error") }
 	var num int
 	err := M(12).Zip(func(int, net.Conn) int { return 100 }, M(f())).To(&num)
@@ -387,4 +387,20 @@ func (suite *MonadTestSuite) CrossNil() {
 	err = M(f()).Zip(func(net.Conn, int) int { return 100 }, M(12)).To(&num)
 	suite.Error(err)
 	suite.Zero(num)
+}
+
+type E1 struct{ S string }
+
+func (suite *MonadTestSuite) TestNilDataCantContinue() {
+	var q *E1
+	M(q).ExpectPass(func(s *E1) bool {
+		panic("should not occur")
+	}).Error()
+}
+
+func (suite *MonadTestSuite) TestNilReturnDataCantContinue() {
+	f := func() *E1 { return nil }
+	M(f()).ExpectPass(func(s *E1) bool {
+		panic("should not occur")
+	}).Error()
 }

@@ -27,7 +27,7 @@ type Monad interface {
 }
 
 func M(v ...interface{}) Monad {
-	if v[0] == nil {
+	if isNilObject(v[0]) {
 		if len(v) > 1 {
 			if _, ok := v[len(v)-1].(error); ok {
 				return newNilMonad(v[len(v)-1].(error))
@@ -252,4 +252,16 @@ func toErrMonadFunc(fn interface{}) reflect.Value {
 		out := reflect.ValueOf(fn).Call(in)
 		return []reflect.Value{out[0], reflect.ValueOf(true), reflect.Zero(errType)}
 	})
+}
+
+func isNilObject(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+		return rv.IsNil()
+	}
+	return false
 }
