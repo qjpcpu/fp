@@ -12,8 +12,8 @@ type Monad interface {
 	ExpectPass(fn interface{}) Monad
 	// ExpectNoError func(type1) (error)
 	ExpectNoError(fn interface{}) Monad
-	// FlatMap func(type1) (type2,&optional error/bool)
-	FlatMap(fn interface{}) Stream
+	// StreamBy func(type1) (type2,&optional error/bool)
+	StreamBy(fn interface{}) Stream
 	// Zip monads
 	Zip(interface{}, ...Monad) Monad
 	// Once monad
@@ -161,7 +161,7 @@ func (em errorMonad) Expect(fn interface{}) Monad {
 	}
 }
 
-func (em errorMonad) FlatMap(fn interface{}) Stream {
+func (em errorMonad) StreamBy(fn interface{}) Stream {
 	fnVal := toErrMonadFunc(fn)
 	ctx := newCtx(nil)
 	evalM := func() (reflect.Value, bool, error) {

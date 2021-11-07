@@ -9,7 +9,7 @@ func (m nilMonad) ExpectPass(fn interface{}) Monad { return m }
 
 func (m nilMonad) ExpectNoError(fn interface{}) Monad { return m }
 
-func (m nilMonad) FlatMap(fn interface{}) Stream { return newNilStream() }
+func (m nilMonad) StreamBy(fn interface{}) Stream { return newNilStream() }
 
 func (m nilMonad) Zip(interface{}, ...Monad) Monad { return m }
 

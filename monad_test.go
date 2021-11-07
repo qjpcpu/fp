@@ -53,44 +53,44 @@ func (suite *MonadTestSuite) TestErrorMonadWithConstructError() {
 
 }
 
-func (suite *MonadTestSuite) TestErrorMonadFlatMap() {
+func (suite *MonadTestSuite) TestErrorMonadStreamBy() {
 	var out []int
 	err := M("2").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
-	}).FlatMap(func(i int64) []int {
+	}).StreamBy(func(i int64) []int {
 		return StreamOf(NewCounter(int(i))).Ints()
 	}).ToSlice(&out)
 	suite.NoError(err)
 	suite.Equal([]int{0, 1}, out)
 }
 
-func (suite *MonadTestSuite) TestErrorMonadFlatMapStream() {
+func (suite *MonadTestSuite) TestErrorMonadStreamByStream() {
 	var out []int
 	err := M("2").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
-	}).FlatMap(func(i int64) Stream {
+	}).StreamBy(func(i int64) Stream {
 		return StreamOf(NewCounter(int(i)))
 	}).ToSlice(&out)
 	suite.NoError(err)
 	suite.Equal([]int{0, 1}, out)
 }
 
-func (suite *MonadTestSuite) TestErrorMonadFlatMapStreamWithError() {
+func (suite *MonadTestSuite) TestErrorMonadStreamByStreamWithError() {
 	var out []int
 	err := M("2").Map(func(s string) (int64, error) {
 		return 0, errors.New("err")
-	}).FlatMap(func(i int64) Stream {
+	}).StreamBy(func(i int64) Stream {
 		return StreamOf(NewCounter(int(i)))
 	}).ToSlice(&out)
 	suite.Error(err)
 	suite.Zero(out)
 }
 
-func (suite *MonadTestSuite) TestErrorMonadFlatMapStreamWithOptional() {
+func (suite *MonadTestSuite) TestErrorMonadStreamByStreamWithOptional() {
 	var out []int
 	err := M("2").Map(func(s string) (int64, bool) {
 		return 0, false
-	}).FlatMap(func(i int64) Stream {
+	}).StreamBy(func(i int64) Stream {
 		return StreamOf(NewCounter(int(i)))
 	}).ToSlice(&out)
 	suite.NoError(err)
@@ -102,7 +102,7 @@ func (suite *MonadTestSuite) TestErrorMonadFMWithConstructError() {
 		return "11", errors.New("err")
 	}
 	var v []int64
-	err := M(cons()).FlatMap(func(s string) ([]int64, error) {
+	err := M(cons()).StreamBy(func(s string) ([]int64, error) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return []int64{i}, err
 	}).ToSlice(&v)
@@ -112,7 +112,7 @@ func (suite *MonadTestSuite) TestErrorMonadFMWithConstructError() {
 
 func (suite *MonadTestSuite) TestErrorMonadFMWithError() {
 	var v []int64
-	err := M("2a").FlatMap(func(s string) ([]int64, error) {
+	err := M("2a").StreamBy(func(s string) ([]int64, error) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return []int64{i}, err
 	}).ToSlice(&v)
@@ -145,9 +145,9 @@ func (suite *MonadTestSuite) TestMayBeMonadMap() {
 	suite.NoError(err)
 }
 
-func (suite *MonadTestSuite) TestMayBeMonadFlatMap() {
+func (suite *MonadTestSuite) TestMayBeMonadStreamBy() {
 	var v []int64
-	err := M("2").FlatMap(func(s string) ([]int64, bool) {
+	err := M("2").StreamBy(func(s string) ([]int64, bool) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return []int64{i}, err == nil
 	}).ToSlice(&v)
@@ -155,9 +155,9 @@ func (suite *MonadTestSuite) TestMayBeMonadFlatMap() {
 	suite.NoError(err)
 }
 
-func (suite *MonadTestSuite) TestMayBeMonadFlatMap2() {
+func (suite *MonadTestSuite) TestMayBeMonadStreamBy2() {
 	var v []int64
-	err := M("2", false).FlatMap(func(s string) ([]int64, bool) {
+	err := M("2", false).StreamBy(func(s string) ([]int64, bool) {
 		i, _ := strconv.ParseInt(s, 10, 64)
 		return []int64{i}, true
 	}).ToSlice(&v)
@@ -165,9 +165,9 @@ func (suite *MonadTestSuite) TestMayBeMonadFlatMap2() {
 	suite.NoError(err)
 }
 
-func (suite *MonadTestSuite) TestMayBeMonadFlatMap3() {
+func (suite *MonadTestSuite) TestMayBeMonadStreamBy3() {
 	var v []int64
-	err := M("2", true).FlatMap(func(s string) ([]int64, bool) {
+	err := M("2", true).StreamBy(func(s string) ([]int64, bool) {
 		i, _ := strconv.ParseInt(s, 10, 64)
 		return []int64{i}, false
 	}).ToSlice(&v)
@@ -372,7 +372,7 @@ func (suite *MonadTestSuite) TestMonadNilType2() {
 
 func (suite *MonadTestSuite) TestMonadNilCover() {
 	f := func() net.Conn { return nil }
-	M(f()).Map(nil).ExpectPass(nil).ExpectNoError(nil).FlatMap(nil)
+	M(f()).Map(nil).ExpectPass(nil).ExpectNoError(nil).StreamBy(nil)
 	M(f()).Zip(nil).Once().fnContainer()()
 	M(f()).To(1)
 }
@@ -403,4 +403,18 @@ func (suite *MonadTestSuite) TestNilReturnDataCantContinue() {
 	M(f()).ExpectPass(func(s *E1) bool {
 		panic("should not occur")
 	}).Error()
+}
+
+func (suite *MonadTestSuite) TestOnceWithErr() {
+	f := func() (int, error) { return 0, errors.New("error") }
+	m1 := M(f()).Once()
+	err := M(10).Zip(func(a, b int) int { return a + b }, m1).Error()
+	suite.Error(err)
+
+	err = m1.Zip(func(a, b int) int { return a + b }, M(10)).Error()
+	suite.Error(err)
+
+	err = M(12).Zip(func(a, b int) int { return a + b }, m1).Error()
+	suite.Error(err)
+
 }
