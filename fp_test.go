@@ -1998,6 +1998,22 @@ func (suite *TestFPTestSuite) TestCursorError2() {
 	suite.Equal([]string{"1-1"}, out)
 }
 
+func (suite *TestFPTestSuite) TestCursorBool() {
+	c := &_testCursor{
+		i:   1,
+		max: 4,
+		errfun: func(x int) error {
+			return nil
+		},
+	}
+	var out []string
+	err := StreamByCursor(c, func(i int, s string) (string, bool) {
+		return fmt.Sprintf("%v-%v", i, s), i != 2
+	}).ToSlice(&out)
+	suite.NoError(err)
+	suite.Equal([]string{"1-1", "3-3"}, out)
+}
+
 func (suite *TestFPTestSuite) TestStream0Nil() {
 	f := func() ([]string, error) { return nil, errors.New("x") }
 	var out []string

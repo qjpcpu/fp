@@ -9,6 +9,8 @@ type Cursor interface {
 	Scan(...interface{}) error
 }
 
+// StreamByCursor create stream by cursor
+// mapfn should looks like func(type1,type2...) (typex,&optional bool/error)
 func StreamByCursor(c Cursor, mapfn interface{}) Stream {
 	argTypes := inTypes(reflect.TypeOf(mapfn))
 	makeArgs := _makeCursorMapArgsWithErr(argTypes)
@@ -28,6 +30,10 @@ func StreamByCursor(c Cursor, mapfn interface{}) Stream {
 		}
 		return failedRes
 	})
+	if nmap, bmap, ok := convertBooleanMap(mapfn); ok {
+		return StreamOf(fn.Interface()).
+			Map(_wrapCursorMap(nmap)).Map(bmap)
+	}
 	return StreamOf(fn.Interface()).
 		Map(_wrapCursorMap(mapfn))
 }
@@ -86,4 +92,33 @@ func _wrapCursorMap(mapfn interface{}) interface{} {
 			return append(zeroRetVals, realInVals[len(realInVals)-1])
 		}
 	}).Interface()
+}
+
+func convertBooleanMap(mapfn interface{}) (newMapFn interface{}, filterMapFn interface{}, ok bool) {
+	mapVal := reflect.ValueOf(mapfn)
+	retTypes := outTypes(reflect.TypeOf(mapfn))
+	if len(retTypes) != 2 || retTypes[1] != boolType {
+		return nil, nil, false
+	}
+
+	composedType := reflect.StructOf([]reflect.StructField{
+		{Name: "Val", Type: retTypes[0]},
+		{Name: "OK", Type: boolType},
+	})
+	newMapFnType := reflect.FuncOf(inTypes(reflect.TypeOf(mapfn)), []reflect.Type{composedType}, false)
+	newMapFn = reflect.MakeFunc(newMapFnType, func(in []reflect.Value) []reflect.Value {
+		out := mapVal.Call(in)
+		val := reflect.New(composedType)
+		val.Elem().FieldByName("Val").Set(out[0])
+		val.Elem().FieldByName("OK").Set(out[1])
+		return []reflect.Value{val.Elem()}
+	}).Interface()
+
+	filterFnType := reflect.FuncOf([]reflect.Type{composedType}, []reflect.Type{retTypes[0], retTypes[1]}, false)
+	filterMapFn = reflect.MakeFunc(filterFnType, func(in []reflect.Value) []reflect.Value {
+		return []reflect.Value{in[0].FieldByName("Val"), in[0].FieldByName("OK")}
+	}).Interface()
+
+	ok = true
+	return
 }
