@@ -1243,6 +1243,35 @@ func (suite *TestFPTestSuite) TestFirstError() {
 	suite.NoError(out)
 }
 
+func (suite *TestFPTestSuite) TestFirstError2() {
+	var cnt int
+	err := StreamOf([]string{"a", "b", "c"}).Map(func(s string) error {
+		if s == "a" {
+			cnt++
+			return nil
+		}
+		if s == "b" {
+			cnt++
+			return errors.New("x")
+		}
+		cnt++
+		panic("panic")
+	}).Error()
+
+	suite.Error(err)
+	suite.Equal(2, cnt)
+}
+
+func (suite *TestFPTestSuite) TestFirstError3() {
+	var errList []error
+	err := StreamOf([]string{"a", "b", "c"}).Map(func(s string) error {
+		return errors.New(s)
+	}).ToSlice(&errList)
+
+	suite.NoError(err)
+	suite.Equal([]error{errors.New("a"), errors.New("b"), errors.New("c")}, errList)
+}
+
 func (suite *TestFPTestSuite) TestFirstErrorPattern() {
 	var count int
 	slice := []string{"a", "b", "c"}
