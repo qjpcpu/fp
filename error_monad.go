@@ -203,7 +203,7 @@ func (em errorMonad) StreamBy(fn interface{}) Stream {
 			} else if !ok {
 				return reflect.Value{}, false
 			}
-			_, iter = makeIter(out)
+			_, iter = makeIter(ctx, out)
 		}
 		return iter()
 	})

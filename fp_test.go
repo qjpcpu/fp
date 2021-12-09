@@ -1427,12 +1427,6 @@ func (suite *TestFPTestSuite) TestToSliceMustBePtr() {
 	})
 }
 
-func (suite *TestFPTestSuite) TestMakeIter() {
-	suite.Panics(func() {
-		makeIter(reflect.ValueOf(1))
-	})
-}
-
 func (suite *TestFPTestSuite) TestNaturalNumbers() {
 	suite.Equal(uint64(0), NaturalNumbers().First().Uint64())
 }
@@ -1969,6 +1963,11 @@ func (suite *TestFPTestSuite) TestCursor() {
 	suite.NoError(err)
 	suite.Equal([]string{"1-1", "2-2"}, out)
 }
+func (suite *TestFPTestSuite) TestMakeIter() {
+	suite.Panics(func() {
+		makeIter(newCtx(nil), reflect.ValueOf(1))
+	})
+}
 
 func (suite *TestFPTestSuite) TestCursorError() {
 	c := &_testCursor{
@@ -2055,4 +2054,34 @@ func (suite *TestFPTestSuite) TestStream0Nil1() {
 	var out []string
 	err := Stream0Of(f()).ToSlice(&out)
 	suite.NoError(err)
+}
+
+func (suite *TestFPTestSuite) TestIterFunctionWithError() {
+	var i int
+	fn := func() (int, bool, error) {
+		i++
+		if i > 3 {
+			return 0, false, nil
+		}
+		return i, true, nil
+	}
+	var out []int
+	err := StreamOf(fn).ToSlice(&out)
+	suite.NoError(err)
+	suite.Equal(out, []int{1, 2, 3})
+}
+
+func (suite *TestFPTestSuite) TestIterFunctionWithError1() {
+	var i int
+	fn := func() (int, bool, error) {
+		i++
+		if i > 3 {
+			return 0, true, errors.New("err")
+		}
+		return i, true, nil
+	}
+	var out []int
+	err := StreamOf(fn).ToSlice(&out)
+	suite.Error(err)
+	suite.Equal(out, []int{1, 2, 3})
 }

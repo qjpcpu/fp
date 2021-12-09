@@ -18,7 +18,7 @@ type KVSource interface {
 	Next() (reflect.Value, reflect.Value, bool)
 }
 
-func makeIter(val reflect.Value) (reflect.Type, iterator) {
+func makeIter(ctx context, val reflect.Value) (reflect.Type, iterator) {
 	typ := val.Type()
 	if source, ok := val.Interface().(Source); ok && source != nil {
 		return source.ElemType(), source.Next
@@ -26,6 +26,15 @@ func makeIter(val reflect.Value) (reflect.Type, iterator) {
 	if isIterFunction(val) {
 		return val.Type().Out(0), func() (reflect.Value, bool) {
 			out := val.Call(nil)
+			return out[0], out[1].Bool()
+		}
+	} else if isIterFunction2(val) {
+		return val.Type().Out(0), func() (reflect.Value, bool) {
+			out := val.Call(nil)
+			if _err := out[2].Interface(); _err != nil && _err.(error) != nil {
+				ctx.SetErr(_err.(error))
+				return reflect.Value{}, false
+			}
 			return out[0], out[1].Bool()
 		}
 	}
@@ -43,6 +52,11 @@ func makeIter(val reflect.Value) (reflect.Type, iterator) {
 func isIterFunction(fn reflect.Value) bool {
 	typ := fn.Type()
 	return typ.Kind() == reflect.Func && typ.NumIn() == 0 && typ.NumOut() == 2 && typ.Out(1) == boolType
+}
+
+func isIterFunction2(fn reflect.Value) bool {
+	typ := fn.Type()
+	return typ.Kind() == reflect.Func && typ.NumIn() == 0 && typ.NumOut() == 3 && typ.Out(1) == boolType && typ.Out(2) == errType
 }
 
 /* slice stream */

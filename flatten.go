@@ -37,13 +37,14 @@ func (q *stream) Flatten() Stream {
 			}
 			break
 		}
-		_makeIter = func(v reflect.Value) (reflect.Type, iterator) {
+		_makeIter = func(_ context, v reflect.Value) (reflect.Type, iterator) {
 			return elemType, v.Interface().(Stream).ToSource().Next
 		}
 	} else {
 		elemType = q.expectElemTyp.Elem()
 	}
-	return newStream(newCtx(q.ctx), elemType, q.iter, func(outernext iterator) iterator {
+	ctx2 := newCtx(q.ctx)
+	return newStream(ctx2, elemType, q.iter, func(outernext iterator) iterator {
 		var innernext iterator
 		var inner reflect.Value
 		return func() (item reflect.Value, ok bool) {
@@ -60,7 +61,7 @@ func (q *stream) Flatten() Stream {
 						ok = false
 						continue
 					}
-					_, innernext = _makeIter(inner)
+					_, innernext = _makeIter(ctx2, inner)
 				}
 				item, ok = innernext()
 				if !ok {

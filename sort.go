@@ -7,7 +7,8 @@ import (
 
 func (q *stream) Sort() Stream {
 	var iter iterator
-	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
+	ctx := newCtx(q.ctx)
+	return newStream(ctx, q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			arr := q.getResult().Result()
 			v := reflect.ValueOf(arr)
@@ -18,7 +19,7 @@ func (q *stream) Sort() Stream {
 				typ: reflect.TypeOf(arr),
 				val: reflect.ValueOf(arr),
 			}
-			_, iter = makeIter(val.val)
+			_, iter = makeIter(ctx, val.val)
 		}
 		return iter()
 	})
@@ -26,7 +27,8 @@ func (q *stream) Sort() Stream {
 
 func (q *stream) SortBy(fn interface{}) Stream {
 	var iter iterator
-	return newStream(newCtx(q.ctx), q.expectElemTyp, func() (reflect.Value, bool) {
+	ctx := newCtx(q.ctx)
+	return newStream(ctx, q.expectElemTyp, func() (reflect.Value, bool) {
 		if iter == nil {
 			arr := q.getResult().Result()
 			v := reflect.ValueOf(arr)
@@ -38,7 +40,7 @@ func (q *stream) SortBy(fn interface{}) Stream {
 				typ: reflect.TypeOf(arr),
 				val: reflect.ValueOf(arr),
 			}
-			_, iter = makeIter(val.val)
+			_, iter = makeIter(ctx, val.val)
 		}
 		return iter()
 	})

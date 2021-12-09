@@ -405,6 +405,20 @@ func (suite *MonadTestSuite) TestNilReturnDataCantContinue() {
 	}).Error()
 }
 
+func (suite *MonadTestSuite) TestMapBool() {
+	var b bool
+	M(1).Map(func(int) bool {
+		return true
+	}).To(&b)
+	suite.True(b)
+
+	var b1 bool
+	M(1).Map(func(int) bool {
+		return false
+	}).To(&b1)
+	suite.False(b1)
+}
+
 func (suite *MonadTestSuite) TestOnceWithErr() {
 	f := func() (int, error) { return 0, errors.New("error") }
 	m1 := M(f()).Once()

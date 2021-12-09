@@ -111,8 +111,9 @@ type Stream interface {
 }
 
 func StreamOf(arr interface{}) Stream {
-	elemTyp, it := makeIter(reflect.ValueOf(arr))
-	return newStream(nil, elemTyp, it)
+	ctx := newCtx(nil)
+	elemTyp, it := makeIter(ctx, reflect.ValueOf(arr))
+	return newStream(ctx, elemTyp, it)
 }
 
 func Stream0Of(arr ...interface{}) Stream {
@@ -121,7 +122,7 @@ func Stream0Of(arr ...interface{}) Stream {
 		ctx := newCtx(nil)
 		/* arr[length-1] is error */
 		ctx.SetErr(arr[length-1].(error))
-		elemTyp, it := makeIter(reflect.ValueOf(arr[0]))
+		elemTyp, it := makeIter(ctx, reflect.ValueOf(arr[0]))
 		return newStream(ctx, elemTyp, it)
 	}
 	return StreamOf(arr[0])
