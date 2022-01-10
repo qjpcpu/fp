@@ -1946,7 +1946,7 @@ func (suite *TestFPTestSuite) TestCursor() {
 		errfun: func(int) error { return nil },
 	}
 	var out []string
-	err := StreamByCursor(c, func(i int, s string) string {
+	err := StreamOfCursor(c, func(i int, s string) string {
 		return fmt.Sprintf("%v-%v", i, s)
 	}).ToSlice(&out)
 	suite.NoError(err)
@@ -1957,7 +1957,7 @@ func (suite *TestFPTestSuite) TestCursor() {
 		max:    3,
 		errfun: func(int) error { return nil },
 	}
-	err = StreamByCursor(c, func(i int, s *string) (string, error) {
+	err = StreamOfCursor(c, func(i int, s *string) (string, error) {
 		return fmt.Sprintf("%v-%v", i, *s), nil
 	}).ToSlice(&out)
 	suite.NoError(err)
@@ -1981,7 +1981,7 @@ func (suite *TestFPTestSuite) TestCursorError() {
 		},
 	}
 	var out []string
-	err := StreamByCursor(c, func(i int, s string) string {
+	err := StreamOfCursor(c, func(i int, s string) string {
 		return fmt.Sprintf("%v-%v", i, s)
 	}).ToSlice(&out)
 	suite.Error(err)
@@ -2000,7 +2000,7 @@ func (suite *TestFPTestSuite) TestCursorError1() {
 		},
 	}
 	var out []string
-	err := StreamByCursor(c, func(i int, s string) (string, error) {
+	err := StreamOfCursor(c, func(i int, s string) (string, error) {
 		return fmt.Sprintf("%v-%v", i, s), nil
 	}).ToSlice(&out)
 	suite.Error(err)
@@ -2016,7 +2016,7 @@ func (suite *TestFPTestSuite) TestCursorError2() {
 		},
 	}
 	var out []string
-	err := StreamByCursor(c, func(i int, s string) (string, error) {
+	err := StreamOfCursor(c, func(i int, s string) (string, error) {
 		if i == 2 {
 			return "", errors.New("test err")
 		}
@@ -2035,7 +2035,7 @@ func (suite *TestFPTestSuite) TestCursorBool() {
 		},
 	}
 	var out []string
-	err := StreamByCursor(c, func(i int, s string) (string, bool) {
+	err := StreamOfCursor(c, func(i int, s string) (string, bool) {
 		return fmt.Sprintf("%v-%v", i, s), i != 2
 	}).ToSlice(&out)
 	suite.NoError(err)

@@ -9,9 +9,9 @@ type Cursor interface {
 	Scan(...interface{}) error
 }
 
-// StreamByCursor create stream by cursor
+// StreamOfCursor create stream by cursor
 // mapfn should looks like func(type1,type2...) (typex,&optional bool/error)
-func StreamByCursor(c Cursor, mapfn interface{}) Stream {
+func StreamOfCursor(c Cursor, mapfn interface{}) Stream {
 	argTypes := inTypes(reflect.TypeOf(mapfn))
 	makeArgs := _makeCursorMapArgsWithErr(argTypes)
 
