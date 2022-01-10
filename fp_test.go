@@ -949,8 +949,7 @@ func (suite *TestFPTestSuite) TestCounter() {
 }
 
 func (suite *TestFPTestSuite) TestCounterRange() {
-	source := NewCounterRange(1, 3)
-	out := StreamOf(source).Ints()
+	out := RangeStream(1, 3).Ints()
 	suite.Equal([]int{1, 2, 3}, out)
 }
 

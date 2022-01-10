@@ -58,7 +58,7 @@ func (suite *MonadTestSuite) TestErrorMonadStreamOf() {
 	err := M("2").Map(func(s string) (int64, error) {
 		return strconv.ParseInt(s, 10, 64)
 	}).StreamOf(func(i int64) []int {
-		return StreamOf(NewCounter(int(i))).Ints()
+		return Times(int(i)).Ints()
 	}).ToSlice(&out)
 	suite.NoError(err)
 	suite.Equal([]int{0, 1}, out)
