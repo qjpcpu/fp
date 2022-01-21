@@ -103,6 +103,11 @@ func (rv Value) Int32() (s int32) {
 	return
 }
 
+func (rv Value) Uint() (s uint) {
+	rv.To(&s)
+	return
+}
+
 func (rv Value) Uint32() (s uint32) {
 	rv.To(&s)
 	return

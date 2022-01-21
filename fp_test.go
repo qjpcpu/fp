@@ -339,6 +339,14 @@ func (suite *TestFPTestSuite) TestReduce0Empty() {
 	source = []int{}
 	ret = StreamOf(source).Reduce0(max).Int()
 	suite.Equal(int(0), ret)
+
+	source1 := []uint{1, 2}
+	ret1 := StreamOf(source1).Reduce0(MaxUint).Uint()
+	suite.Equal(uint(2), ret1)
+
+	source1 = []uint{11, 2}
+	ret1 = StreamOf(source1).Reduce0(MaxUint).Uint()
+	suite.Equal(uint(11), ret1)
 }
 
 func (suite *TestFPTestSuite) TestReduceChan() {
