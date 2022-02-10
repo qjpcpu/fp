@@ -64,9 +64,9 @@ type Stream interface {
 	Sub(other Stream) Stream
 	// SubBy keyfn, keyfn is func(element_type) any_type
 	SubBy(other Stream, keyfn interface{}) Stream
-	// Interact stream
+	// Interact stream, keep element on left
 	Interact(other Stream) Stream
-	// InteractBy keyfn, keyfn is func(element_type) any_type
+	// InteractBy keyfn, keyfn is func(element_type) any_type, keep element on left
 	InteractBy(other Stream, keyfn interface{}) Stream
 	// Union append another stream
 	Union(Stream) Stream

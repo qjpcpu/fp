@@ -2092,3 +2092,31 @@ func (suite *TestFPTestSuite) TestIterFunctionWithError1() {
 	suite.Error(err)
 	suite.Equal(out, []int{1, 2, 3})
 }
+
+type Person struct {
+	Name string
+	Age  int
+}
+
+func (suite *TestFPTestSuite) TestInteractByShouldKeepLeft() {
+	s1 := []Person{
+		{Name: "jack", Age: 10},
+		{Name: "david", Age: 9},
+		{Name: "tom", Age: 3},
+	}
+	s2 := []Person{
+		{Name: "jack", Age: 1},
+		{Name: "tom", Age: 1},
+		{Name: "john", Age: 1},
+	}
+	var out []Person
+	StreamOf(s1).
+		InteractBy(StreamOf(s2), func(p Person) string {
+			return p.Name
+		}).
+		ToSlice(&out)
+	suite.ElementsMatch(out, []Person{
+		{Name: "jack", Age: 10},
+		{Name: "tom", Age: 3},
+	})
+}

@@ -1,6 +1,8 @@
 package fp
 
-import "reflect"
+import (
+	"reflect"
+)
 
 func (q *stream) ToSetBy(fn interface{}) KVStream {
 	fntyp := reflect.TypeOf(fn)
