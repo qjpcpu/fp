@@ -653,6 +653,12 @@ get map keys/values stream
 *** Size
 get map size
 
+#+begin_src go
+	slice := []int{1, 2, 3, 2, 1}
+	out := StreamOf(slice).ToSet().Size()
+	suite.Equal(3, out)
+#+end_src
+
 *** Run/To
 kvstream is also lazy evaluation, get will get the result until Run/To invoked
 
