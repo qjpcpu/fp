@@ -1,6 +1,9 @@
 package fp
 
-import "reflect"
+import (
+	"errors"
+	"reflect"
+)
 
 /* value related */
 type Value struct {
@@ -9,16 +12,19 @@ type Value struct {
 	err error
 }
 
-func (rv Value) To(dst interface{}) bool {
+func (rv Value) To(dst interface{}) error {
+	if rv.err != nil {
+		return rv.err
+	}
 	if !rv.val.IsValid() {
-		return false
+		return nil
 	}
 	val := reflect.ValueOf(dst)
 	if val.Kind() != reflect.Ptr {
-		panic(`fp: dst must be pointer`)
+		return errors.New(`fp: dst must be pointer`)
 	}
 	val.Elem().Set(rv.val)
-	return true
+	return nil
 }
 
 func (rv Value) Result() interface{} {

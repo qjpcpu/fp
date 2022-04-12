@@ -1325,17 +1325,17 @@ func (suite *TestFPTestSuite) TestFirstToSuccess() {
 	var out *string
 	success := StreamOf(slice).First().To(&out)
 	suite.Equal(strPtr("a"), out)
-	suite.True(success)
+	suite.Nil(success)
 
 	var out1 *string
 	success = StreamOf(slice).Filter(func(s *string) bool { return false }).First().To(&out)
 	suite.Nil(out1)
-	suite.False(success)
+	suite.Nil(success)
 
 	var out2 string
 	success = StreamOf([]string{}).First().To(&out2)
 	suite.Equal("", out2)
-	suite.False(success)
+	suite.Nil(success)
 }
 
 func (suite *TestFPTestSuite) TestEqual() {
@@ -1499,9 +1499,7 @@ func (suite *TestFPTestSuite) TestToXXX() {
 	suite.Equal(uint32(1), StreamOf([]uint32{1}).First().Uint32())
 	suite.Equal(float64(1), StreamOf([]float64{1}).First().Float64())
 
-	suite.Panics(func() {
-		StreamOf([]int{1}).First().To(1)
-	})
+	suite.Error(StreamOf([]int{1}).First().To(1))
 }
 
 func (suite *TestFPTestSuite) TestInvalidValue() {
@@ -1616,7 +1614,7 @@ func (suite *TestFPTestSuite) TestReduceError() {
 		}).
 		Reduce0(func(i, j int64) int64 { return j })
 	suite.Error(val.Err())
-	suite.Equal(int64(2), val.Int64())
+	suite.Equal(int64(0), val.Int64())
 }
 
 func (suite *TestFPTestSuite) TestFirstMapedError() {
