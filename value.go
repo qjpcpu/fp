@@ -6,6 +6,7 @@ import "reflect"
 type Value struct {
 	typ reflect.Type
 	val reflect.Value
+	err error
 }
 
 func (rv Value) To(dst interface{}) bool {
@@ -28,6 +29,9 @@ func (rv Value) Result() interface{} {
 }
 
 func (rv Value) Err() error {
+	if rv.err != nil {
+		return rv.err
+	}
 	if !rv.val.IsValid() {
 		return nil
 	}
@@ -35,7 +39,10 @@ func (rv Value) Err() error {
 	if res == nil {
 		return nil
 	}
-	return res.(error)
+	if er, ok := res.(error); ok {
+		return er
+	}
+	return nil
 }
 
 func (rv Value) Strings() (s []string) {

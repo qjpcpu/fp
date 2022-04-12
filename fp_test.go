@@ -1599,6 +1599,44 @@ func (suite *TestFPTestSuite) TestReduceNilStream() {
 	suite.Equal(100, out)
 }
 
+func (suite *TestFPTestSuite) TestReduce0Error() {
+	val := StreamOf([]string{"a"}).
+		Map(func(s string) (int64, error) {
+			return strconv.ParseInt(s, 10, 64)
+		}).
+		Reduce0(func(i, j int64) int64 { return i + j })
+	suite.Error(val.Err())
+	suite.Zero(val.Int64())
+}
+
+func (suite *TestFPTestSuite) TestReduceError() {
+	val := StreamOf([]string{"1", "2", "a", "3"}).
+		Map(func(s string) (int64, error) {
+			return strconv.ParseInt(s, 10, 64)
+		}).
+		Reduce0(func(i, j int64) int64 { return j })
+	suite.Error(val.Err())
+	suite.Equal(int64(2), val.Int64())
+}
+
+func (suite *TestFPTestSuite) TestFirstMapedError() {
+	val := StreamOf([]string{"a", "3"}).
+		Map(func(s string) (int64, error) {
+			return strconv.ParseInt(s, 10, 64)
+		}).
+		First()
+	suite.Error(val.Err())
+	suite.Equal(int64(0), val.Int64())
+
+	val = StreamOf([]string{"3", "a"}).
+		Map(func(s string) (int64, error) {
+			return strconv.ParseInt(s, 10, 64)
+		}).
+		First()
+	suite.NoError(val.Err())
+	suite.Equal(int64(3), val.Int64())
+}
+
 func (suite *TestFPTestSuite) TestReduce0NilStream() {
 	out := newNilStream().Reduce0(func(int, int) int {
 		return 0

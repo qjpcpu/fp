@@ -8,5 +8,6 @@ func (q *stream) First() (f Value) {
 		f.val = v
 		return false
 	})
+	f.err = q.ctx.Err()
 	return f
 }

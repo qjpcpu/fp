@@ -37,10 +37,7 @@ func (q *stream) Run() {
 
 func (q *stream) Error() error {
 	if q.expectElemTyp.AssignableTo(errType) {
-		if err := q.SkipWhile(NoError()).First().Err(); err != nil {
-			return err
-		}
-		return q.ctx.Err()
+		return q.SkipWhile(NoError()).First().Err()
 	}
 	q.Run()
 	return q.ctx.Err()

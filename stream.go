@@ -20,7 +20,7 @@ type Stream interface {
 	Flatten() Stream
 	// Reduce stream, fn should be func(initval_type, element_type) initval_type
 	Reduce(initval interface{}, fn interface{}) Value
-	// Reduce0 stream, fn should be func(element_type,element_type) element_type
+	// Reduce0 stream, fn should be func(accumulative element_type,item element_type) element_type
 	Reduce0(fn interface{}) Value
 	// Partition stream, split stream into small batch
 	Partition(size int) Stream
