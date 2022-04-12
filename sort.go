@@ -15,11 +15,7 @@ func (q *stream) Sort() Stream {
 			sort.SliceStable(arr, func(i, j int) bool {
 				return q.compare(v.Index(i), v.Index(j)) < 0
 			})
-			val := Value{
-				typ: reflect.TypeOf(arr),
-				val: reflect.ValueOf(arr),
-			}
-			_, iter = makeIter(ctx, val.val)
+			_, iter = makeIter(ctx, reflect.ValueOf(arr))
 		}
 		return iter()
 	})
@@ -36,11 +32,7 @@ func (q *stream) SortBy(fn interface{}) Stream {
 			sort.SliceStable(arr, func(i, j int) bool {
 				return fnval.Call([]reflect.Value{v.Index(i), v.Index(j)})[0].Bool()
 			})
-			val := Value{
-				typ: reflect.TypeOf(arr),
-				val: reflect.ValueOf(arr),
-			}
-			_, iter = makeIter(ctx, val.val)
+			_, iter = makeIter(ctx, reflect.ValueOf(arr))
 		}
 		return iter()
 	})

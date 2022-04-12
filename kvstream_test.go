@@ -179,7 +179,8 @@ func (suite *KVStreamTestSuite) TestTypedMap() {
 
 }
 
-func (suite *KVStreamTestSuite) TestWithError() {
+func (suite *KVStreamTestSuite) TestResultMapAlwayNonNil() {
+	/* with error */
 	ctx := newCtx(nil)
 	ctx.SetErr(errors.New(""))
 	s := newKvStream(ctx, boolType, boolType, func() reflect.Value { return reflect.Value{} })
@@ -188,6 +189,27 @@ func (suite *KVStreamTestSuite) TestWithError() {
 	suite.Len(mp, 0)
 	suite.NotNil(mp)
 	suite.Error(err)
+
+	/* with error 2 */
+	var mp0 map[int]int
+	err = StreamOf([]string{"1", "a"}).
+		Map(strconv.Atoi).
+		ToSetBy(func(i int) int { return i }).
+		To(&mp0)
+	suite.NotNil(mp0)
+	suite.Error(err)
+
+	/* nil stream */
+	var mp1 map[string]string
+	err = newNilKVStream().To(&mp1)
+	suite.Nil(err)
+	suite.NotNil(mp1)
+
+	/* empty stream */
+	var mp2 map[string]string
+	err = KVStreamOf(map[string]string{}).To(&mp2)
+	suite.Nil(err)
+	suite.NotNil(mp2)
 }
 
 func (suite *KVStreamTestSuite) TestWithMapError() {

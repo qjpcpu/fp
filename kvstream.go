@@ -211,8 +211,11 @@ func (l *kvStream) Run() {
 }
 
 func (l *kvStream) To(ptr interface{}) error {
-	l.getRelut().To(ptr)
-	return l.ctx.Err()
+	val := l.getRelut()
+	err := val.err
+	val.err = nil
+	val.To(ptr)
+	return err
 }
 
 func (l *kvStream) getRelut() Value {
@@ -223,6 +226,7 @@ func (l *kvStream) getRelut() Value {
 	if !val.val.IsValid() || val.val.IsNil() {
 		val.val = reflect.MakeMap(val.typ)
 	}
+	val.err = l.ctx.Err()
 	return val
 }
 

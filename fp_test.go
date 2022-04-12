@@ -1899,7 +1899,7 @@ func (suite *TestFPTestSuite) TestMapMapFilterToSetByTo() {
 		return s
 	}).To(&mp)
 
-	suite.Equal(mp, map[string]string{"B_1": "B_1"})
+	suite.Equal(map[string]string{"B_1": "B_1"}, mp)
 	suite.Error(err0)
 
 	err0 = StreamOf(slice).Map(func(s string) string {

@@ -19,10 +19,12 @@ func (q *stream) JoinStrings(seq string) string {
 }
 
 func (q *stream) getResult() Value {
-	return Value{
+	v := Value{
 		typ: reflect.SliceOf(q.expectElemTyp),
 		val: q.getValue(reflect.Value{}),
 	}
+	v.err = q.ctx.Err()
+	return v
 }
 
 func (q *stream) Run() {
