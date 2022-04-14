@@ -25,34 +25,35 @@ func (ns *nilStream) Reduce0(fn interface{}) Value {
 		val: reflect.Zero(typ),
 	}
 }
-func (ns *nilStream) Partition(size int) Stream                               { return ns }
-func (ns *nilStream) PartitionBy(fn interface{}, includeSplittor bool) Stream { return ns }
-func (ns *nilStream) First() Value                                            { return Value{} }
-func (ns *nilStream) IsEmpty() bool                                           { return true }
-func (ns *nilStream) HasSomething() bool                                      { return false }
-func (ns *nilStream) Exists() bool                                            { return false }
-func (ns *nilStream) Take(n int) Stream                                       { return ns }
-func (ns *nilStream) TakeWhile(fn interface{}) Stream                         { return ns }
-func (ns *nilStream) Skip(size int) Stream                                    { return ns }
-func (ns *nilStream) SkipWhile(fn interface{}) Stream                         { return ns }
-func (ns *nilStream) Sort() Stream                                            { return ns }
-func (ns *nilStream) SortBy(fn interface{}) Stream                            { return ns }
-func (ns *nilStream) Uniq() Stream                                            { return ns }
-func (ns *nilStream) UniqBy(fn interface{}) Stream                            { return ns }
-func (ns *nilStream) Size() int                                               { return 0 }
-func (ns *nilStream) Count() int                                              { return 0 }
-func (ns *nilStream) Contains(interface{}) bool                               { return false }
-func (ns *nilStream) ContainsBy(fn interface{}) bool                          { return false }
-func (ns *nilStream) ToSource() Source                                        { return newNilSource() }
-func (ns *nilStream) Sub(other Stream) Stream                                 { return ns }
-func (ns *nilStream) SubBy(other Stream, keyfn interface{}) Stream            { return ns }
-func (ns *nilStream) Interact(other Stream) Stream                            { return ns }
-func (ns *nilStream) InteractBy(other Stream, keyfn interface{}) Stream       { return ns }
-func (ns *nilStream) Union(o Stream) Stream                                   { return o }
-func (ns *nilStream) ToSet() KVStream                                         { return newNilKVStream() }
-func (ns *nilStream) ToSetBy(fn interface{}) KVStream                         { return newNilKVStream() }
-func (ns *nilStream) GroupBy(fn interface{}) KVStream                         { return newNilKVStream() }
-func (ns *nilStream) Reverse() Stream                                         { return ns }
+func (ns *nilStream) Partition(size int) Stream                                { return ns }
+func (ns *nilStream) PartitionBy(fn interface{}, includeSplittor bool) Stream  { return ns }
+func (ns *nilStream) LPartitionBy(fn interface{}, includeSplittor bool) Stream { return ns }
+func (ns *nilStream) First() Value                                             { return Value{} }
+func (ns *nilStream) IsEmpty() bool                                            { return true }
+func (ns *nilStream) HasSomething() bool                                       { return false }
+func (ns *nilStream) Exists() bool                                             { return false }
+func (ns *nilStream) Take(n int) Stream                                        { return ns }
+func (ns *nilStream) TakeWhile(fn interface{}) Stream                          { return ns }
+func (ns *nilStream) Skip(size int) Stream                                     { return ns }
+func (ns *nilStream) SkipWhile(fn interface{}) Stream                          { return ns }
+func (ns *nilStream) Sort() Stream                                             { return ns }
+func (ns *nilStream) SortBy(fn interface{}) Stream                             { return ns }
+func (ns *nilStream) Uniq() Stream                                             { return ns }
+func (ns *nilStream) UniqBy(fn interface{}) Stream                             { return ns }
+func (ns *nilStream) Size() int                                                { return 0 }
+func (ns *nilStream) Count() int                                               { return 0 }
+func (ns *nilStream) Contains(interface{}) bool                                { return false }
+func (ns *nilStream) ContainsBy(fn interface{}) bool                           { return false }
+func (ns *nilStream) ToSource() Source                                         { return newNilSource() }
+func (ns *nilStream) Sub(other Stream) Stream                                  { return ns }
+func (ns *nilStream) SubBy(other Stream, keyfn interface{}) Stream             { return ns }
+func (ns *nilStream) Interact(other Stream) Stream                             { return ns }
+func (ns *nilStream) InteractBy(other Stream, keyfn interface{}) Stream        { return ns }
+func (ns *nilStream) Union(o Stream) Stream                                    { return o }
+func (ns *nilStream) ToSet() KVStream                                          { return newNilKVStream() }
+func (ns *nilStream) ToSetBy(fn interface{}) KVStream                          { return newNilKVStream() }
+func (ns *nilStream) GroupBy(fn interface{}) KVStream                          { return newNilKVStream() }
+func (ns *nilStream) Reverse() Stream                                          { return ns }
 func (ns *nilStream) Append(element ...interface{}) Stream {
 	if len(element) == 0 {
 		return ns
@@ -92,17 +93,17 @@ func (ks *nilStream) Error() error                  { return nil }
 
 type nilkvStream struct{}
 
-func newNilKVStream() KVStream                            { return &nilkvStream{} }
-func (ks *nilkvStream) Foreach(fn interface{}) KVStream   { return ks }
-func (ks *nilkvStream) Map(fn interface{}) KVStream       { return ks }
-func (ks *nilkvStream) ZipMap(fn interface{}) Stream { return newNilStream() }
-func (ks *nilkvStream) Filter(fn interface{}) KVStream    { return ks }
-func (ks *nilkvStream) Reject(fn interface{}) KVStream    { return ks }
-func (ks *nilkvStream) Contains(key interface{}) bool     { return false }
-func (ks *nilkvStream) Keys() Stream                      { return newNilStream() }
-func (ks *nilkvStream) Values() Stream                    { return newNilStream() }
-func (ks *nilkvStream) Size() int                         { return 0 }
-func (ks *nilkvStream) Run()                              {}
+func newNilKVStream() KVStream                          { return &nilkvStream{} }
+func (ks *nilkvStream) Foreach(fn interface{}) KVStream { return ks }
+func (ks *nilkvStream) Map(fn interface{}) KVStream     { return ks }
+func (ks *nilkvStream) ZipMap(fn interface{}) Stream    { return newNilStream() }
+func (ks *nilkvStream) Filter(fn interface{}) KVStream  { return ks }
+func (ks *nilkvStream) Reject(fn interface{}) KVStream  { return ks }
+func (ks *nilkvStream) Contains(key interface{}) bool   { return false }
+func (ks *nilkvStream) Keys() Stream                    { return newNilStream() }
+func (ks *nilkvStream) Values() Stream                  { return newNilStream() }
+func (ks *nilkvStream) Size() int                       { return 0 }
+func (ks *nilkvStream) Run()                            {}
 func (ks *nilkvStream) To(dstPtr interface{}) error {
 	val := reflect.ValueOf(dstPtr)
 	if !val.Elem().IsValid() || val.Elem().IsNil() {

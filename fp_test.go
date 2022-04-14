@@ -939,9 +939,111 @@ func (suite *TestFPTestSuite) TestPartitionByAndIncludeSplittor() {
 	}, out)
 }
 
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor() {
+	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"a", "b"},
+		{"c", "d", "e"},
+		{"c"},
+		{"c"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor2() {
+	slice := []string{"c", "a", "b", "c", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c", "a", "b"},
+		{"c"},
+		{"c", "d", "e"},
+		{"c"},
+		{"c"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor3() {
+	slice := []string{"c", "c", "c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+		{"c"},
+		{"c"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor31() {
+	slice := []string{"c", "c", "c", "a"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+		{"c"},
+		{"c", "a"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor4() {
+	slice := []string{"c", "c", "a", "b", "c", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+		{"c", "a", "b"},
+		{"c"},
+		{"c", "d", "e"},
+		{"c"},
+		{"c"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor41() {
+	out := newNilStream().LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Len(out, 0)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor5() {
+	slice := []string{}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Len(out, 0)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndIncludeSplittor6() {
+	slice := []string{"c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+	}, out)
+}
+
 func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor() {
 	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
 	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Equal([][]string{
+		{"a", "b"},
+		{"d", "e"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestLPartitionByAndExcludeSplittor() {
+	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
 		return s == "c"
 	}, false).StringsList()
 	suite.Equal([][]string{
@@ -1361,47 +1463,6 @@ func (suite *TestFPTestSuite) TestEmptyString() {
 	suite.Equal([]string{"a", "b"}, out1)
 }
 
-func (suite *TestFPTestSuite) TestMulti0() {
-	slice := []string{"a", "b", "c", "d"}
-	StreamOf(slice).Branch()
-	StreamOf(slice).Branch(func(s Stream) {
-		suite.Equal(slice, s.Strings())
-	})
-}
-
-func (suite *TestFPTestSuite) TestMulti() {
-	slice := []string{"a", "b", "c", "d"}
-	var out1, out2 []string
-	var out3 string
-	StreamOf(slice).Reject(Equal("d")).Branch(func(stream Stream) {
-		stream.Map(strings.ToUpper).ToSlice(&out1)
-	}, func(stream Stream) {
-		out3 = stream.First().String()
-	}, func(stream Stream) {
-		stream.Skip(1).Take(1).ToSlice(&out2)
-	})
-
-	suite.Equal([]string{"A", "B", "C"}, out1)
-	suite.Equal("a", out3)
-	suite.Equal([]string{"b"}, out2)
-}
-
-func (suite *TestFPTestSuite) TestMulti2() {
-	slice := []string{"a", "b", "c", "d"}
-	var out2 []string
-	var out3 string
-	StreamOf(slice).Reject(Equal("d")).Branch(func(stream Stream) {
-
-	}, func(stream Stream) {
-		out3 = stream.First().String()
-	}, func(stream Stream) {
-		stream.Skip(1).Take(1).ToSlice(&out2)
-	})
-
-	suite.Equal("a", out3)
-	suite.Equal([]string{"b"}, out2)
-}
-
 func (suite *TestFPTestSuite) TestZipnFuncCheck() {
 	slice := []string{"a", "b", "c", "d"}
 	suite.Panics(func() {
@@ -1697,7 +1758,6 @@ func (suite *TestFPTestSuite) TestNilStreamXXX() {
 	suite.Equal("", newNilStream().JoinStrings(","))
 	suite.NotPanics(func() {
 		newNilStream().Run()
-		newNilStream().Branch()
 	})
 }
 

@@ -24,8 +24,10 @@ type Stream interface {
 	Reduce0(fn interface{}) Value
 	// Partition stream, split stream into small batch
 	Partition(size int) Stream
-	// PartitionBy func(elem_type) bool
+	// PartitionBy func(elem_type) bool, splittor element would locate at last place of each partition
 	PartitionBy(fn interface{}, includeSplittor bool) Stream
+	// LPartitionBy func(elem_type) bool, splittor element would locate at first place of each partition
+	LPartitionBy(fn interface{}, includeSplittor bool) Stream
 	// First value of stream
 	First() Value
 	// IsEmpty stream
@@ -84,8 +86,6 @@ type Stream interface {
 	Zip(other Stream, fn interface{}) Stream
 	// ZipN multiple stream , fn should be func(self_element_type,other_element_type1,other_element_type2,...) another_type
 	ZipN(fn interface{}, others ...Stream) Stream
-	// Branch to multiple output stream, should not used for unlimited stream
-	Branch(processors ...StreamProcessor)
 	// Reverse a stream
 	Reverse() Stream
 

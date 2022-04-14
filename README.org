@@ -209,7 +209,7 @@ StreamOf(slice).Map(func(s []string) [][]byte {
 suite.Equal("abcdefghi", string(out))
 #+end_src
 
-*** Partition/PartitionBy
+*** Partition/PartitionBy/LPartitionBy
 
 #+begin_src go
 source := []string{"a", "b", "c", "d"}
@@ -227,6 +227,17 @@ out := StreamOf(slice).PartitionBy(func(s string) bool {
 suite.Equal([][]string{
 	{"a", "b", "c"},
 	{"d", "e", "c"},
+	{"c"},
+}, out)
+
+slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+out := StreamOf(slice).LPartitionBy(func(s string) bool {
+	return s == "c"
+}, true).StringsList()
+suite.Equal([][]string{
+	{"a", "b"},
+	{"c", "d", "e"},
+	{"c"},
 	{"c"},
 }, out)
 #+end_src
