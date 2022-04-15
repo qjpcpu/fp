@@ -927,6 +927,101 @@ func (suite *TestFPTestSuite) TestTakeWhileDropLeft() {
 	suite.Equal([]string{"a", "b"}, after)
 }
 
+func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor1() {
+	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Equal([][]string{
+		{"a", "b"},
+		{"d", "e"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor3() {
+	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Equal([][]string{
+		{"a", "b"},
+		{"d", "e"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor2() {
+	slice := []string{"c", "c", "a", "b", "c", "d", "e", "c", "c"}
+	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Equal([][]string{
+		{"a", "b"},
+		{"d", "e"},
+	}, out)
+}
+
+func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor4() {
+	slice := []string{"c"}
+	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Len(out, 0)
+
+	slice = []string{"c", "c"}
+	out = StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Len(out, 0)
+
+	slice = []string{"c"}
+	out = StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Len(out, 0)
+
+	slice = []string{"c", "c"}
+	out = StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, false).StringsList()
+	suite.Len(out, 0)
+}
+
+func (suite *TestFPTestSuite) TestPartitionByAndExcludeSplittor5() {
+	slice := []string{"c"}
+	out := StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+	}, out)
+
+	slice = []string{"c", "c"}
+	out = StreamOf(slice).PartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+		{"c"},
+	}, out)
+
+	slice = []string{"c"}
+	out = StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+	}, out)
+
+	slice = []string{"c", "c"}
+	out = StreamOf(slice).LPartitionBy(func(s string) bool {
+		return s == "c"
+	}, true).StringsList()
+	suite.Equal([][]string{
+		{"c"},
+		{"c"},
+	}, out)
+}
+
 func (suite *TestFPTestSuite) TestPartitionByAndIncludeSplittor() {
 	slice := []string{"a", "b", "c", "d", "e", "c", "c"}
 	out := StreamOf(slice).PartitionBy(func(s string) bool {

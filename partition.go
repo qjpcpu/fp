@@ -44,6 +44,9 @@ func (q *stream) PartitionBy(fn interface{}, includeSplittor bool) Stream {
 						if includeSplittor {
 							slice = reflect.Append(slice, val)
 						}
+						if slice.Len() == 0 {
+							continue
+						}
 						break
 					}
 					slice = reflect.Append(slice, val)
