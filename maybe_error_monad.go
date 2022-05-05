@@ -18,12 +18,8 @@ type Monad interface {
 	Zip(interface{}, ...Monad) Monad
 	// Once monad
 	Once() Monad
-	// To ptr
-	To(ptr interface{}) error
 	// Value of monad
 	Val() Value
-	// Error gives error
-	Error() error
 	// fnContainer return error_boolean_monad real container
 	fnContainer() func() (interface{}, bool, error)
 }
@@ -211,17 +207,6 @@ func (em errorMonad) StreamOf(fn interface{}) Stream {
 	})
 }
 
-func (em errorMonad) To(ptr interface{}) error {
-	out := em.fn.Call(nil)
-	if e := out[2].Interface(); e != nil && e.(error) != nil {
-		return e.(error)
-	}
-	if out[1].Bool() {
-		reflect.ValueOf(ptr).Elem().Set(out[0])
-	}
-	return nil
-}
-
 func (em errorMonad) Val() Value {
 	out := em.fn.Call(nil)
 	if e := out[2].Interface(); e != nil && e.(error) != nil {
@@ -234,20 +219,6 @@ func (em errorMonad) Val() Value {
 		return Value{typ: out[0].Type()}
 	}
 	return Value{}
-}
-
-func (em errorMonad) Error() error {
-	out := em.fn.Call(nil)
-	if e := out[2].Interface(); e != nil && e.(error) != nil {
-		return e.(error)
-	}
-	v := out[0].Interface()
-	if v != nil {
-		if e, ok := v.(error); ok {
-			return e
-		}
-	}
-	return nil
 }
 
 func toErrMonadFunc(fn interface{}) reflect.Value {
