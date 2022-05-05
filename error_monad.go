@@ -20,6 +20,8 @@ type Monad interface {
 	Once() Monad
 	// To ptr
 	To(ptr interface{}) error
+	// Value of monad
+	Val() Value
 	// Error gives error
 	Error() error
 	// fnContainer return error_boolean_monad real container
@@ -218,6 +220,20 @@ func (em errorMonad) To(ptr interface{}) error {
 		reflect.ValueOf(ptr).Elem().Set(out[0])
 	}
 	return nil
+}
+
+func (em errorMonad) Val() Value {
+	out := em.fn.Call(nil)
+	if e := out[2].Interface(); e != nil && e.(error) != nil {
+		return Value{err: e.(error)}
+	}
+	if out[1].Bool() {
+		return Value{typ: out[0].Type(), val: out[0]}
+	}
+	if out[0].IsValid() {
+		return Value{typ: out[0].Type()}
+	}
+	return Value{}
 }
 
 func (em errorMonad) Error() error {

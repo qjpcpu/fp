@@ -453,6 +453,23 @@ func (suite *MonadTestSuite) TestMapBool() {
 	suite.False(b1)
 }
 
+func (suite *MonadTestSuite) TestCreateWithMaybe() {
+	fn := func() (int, bool) {
+		return 1, false
+	}
+	var v int
+	M(fn()).
+		To(&v)
+	suite.Equal(0, v)
+
+	fn = func() (int, bool) {
+		return 1, true
+	}
+	M(fn()).
+		To(&v)
+	suite.Equal(1, v)
+}
+
 func (suite *MonadTestSuite) TestOnceWithErr() {
 	f := func() (int, error) { return 0, errors.New("error") }
 	m1 := M(f()).Once()
@@ -465,4 +482,26 @@ func (suite *MonadTestSuite) TestOnceWithErr() {
 	err = M(12).Zip(func(a, b int) int { return a + b }, m1).Error()
 	suite.Error(err)
 
+}
+
+func (suite *MonadTestSuite) TestVal() {
+	f := func() (int, error) { return 0, errors.New("error") }
+	suite.Error(M(f()).Val().Err())
+
+	suite.Equal(10, M(int(10)).Val().Int())
+}
+
+func (suite *MonadTestSuite) TestBoolVal() {
+	f := func() (int, bool) { return 10, false }
+	suite.Zero(M(f()).Val().Int())
+
+	f1 := func() (interface{}, bool) { return 10, false }
+	suite.Zero(M(f1()).Val().Int())
+
+	f2 := func() (interface{}, bool) { return nil, false }
+	suite.Zero(M(f2()).Val().Int())
+}
+
+func (suite *MonadTestSuite) TestNilVal() {
+	suite.Error(newNilMonad(errors.New(`error`)).Val().Err())
 }
