@@ -102,6 +102,32 @@ func (suite *TestFPTestSuite) TestErrPassing() {
 	suite.Error(err)
 }
 
+func (suite *TestFPTestSuite) TestToSetByWithErr() {
+	slice := []string{"1", "b", "c"}
+	var out map[string]int64
+	err := StreamOf(slice).
+		ToSetBy(func(s string) (string, int64, error) {
+			i, err := strconv.ParseInt(s, 10, 64)
+			return s, i, err
+		}).
+		To(&out)
+	suite.Error(err)
+	suite.Equal(map[string]int64{"1": 1}, out)
+}
+
+func (suite *TestFPTestSuite) TestToSetByPanicWithBadFunction() {
+	slice := []string{"1", "b", "c"}
+	suite.Panics(func() {
+		var out map[string]int64
+		StreamOf(slice).
+			ToSetBy(func(s string) (string, int64, int, error) {
+				i, err := strconv.ParseInt(s, 10, 64)
+				return s, i, 0, err
+			}).
+			To(&out)
+	})
+}
+
 func (suite *TestFPTestSuite) TestFlatMapErrPassing() {
 	gerr := func(c bool) error {
 		if c {

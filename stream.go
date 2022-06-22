@@ -74,7 +74,7 @@ type Stream interface {
 	Union(Stream) Stream
 	// ToSet element as key, value is bool
 	ToSet() KVStream
-	// ToSet by func(element_type) any_type or func(element_type) (key_type,val_type)
+	// ToSet by func(element_type) any_type or func(element_type) (key_type,val_type,&optional error)
 	ToSetBy(fn interface{}) KVStream
 	// GroupBy func(element_type) any_type, result is a kv set (any_type: [element_type]), this is an aggregate op, so it would block stream
 	GroupBy(fn interface{}) KVStream
