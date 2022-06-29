@@ -1,5 +1,7 @@
 * function programming experimental lib
 
+[[./codcov.svg]]
+
 ** why another fp lib
 
 I like fp style and I haven't found a lib with these features:
