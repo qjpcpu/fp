@@ -218,6 +218,7 @@ func (em errorMonad) Val() Value {
 	if out[0].IsValid() {
 		return Value{typ: out[0].Type()}
 	}
+	/* never come here */
 	return Value{}
 }
 
