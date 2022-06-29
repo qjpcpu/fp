@@ -215,11 +215,8 @@ func (em errorMonad) Val() Value {
 	if out[1].Bool() {
 		return Value{typ: out[0].Type(), val: out[0]}
 	}
-	if out[0].IsValid() {
-		return Value{typ: out[0].Type()}
-	}
-	/* never come here */
-	return Value{}
+	/* out[0] would always valid */
+	return Value{typ: out[0].Type()}
 }
 
 func toErrMonadFunc(fn interface{}) reflect.Value {
